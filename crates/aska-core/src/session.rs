@@ -323,7 +323,15 @@ pub struct Session {
     kem_sealed: bool,
     /// Receiver: the receiving seed; matching is by decapsulation, not by label.
     seed: Option<LockedBuf>,
+    /// Receiver: the stand-ins of an unmatched seed bucket (a locked page holding zeros, the
+    /// label of the all-zero root, a zero Block). Kept until the Session ends so that a miss
+    /// ends with the same moves as a hit, which keeps its buffers (timing parity, DC-02 (c)).
+    /// Nothing secret: the conditional copies never wrote into them.
+    spent: Option<SpentStandIns>,
 }
+
+/// See `Session::spent`: a locked page, a label and a Block buffer, all non-secret.
+type SpentStandIns = (LockedBuf, Secret32, Option<Zeroizing<Vec<u8>>>);
 
 impl std::fmt::Debug for Session {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -407,6 +415,7 @@ impl Session {
             recipient: None,
             kem_sealed: false,
             seed: None,
+            spent: None,
         })
     }
 
@@ -1170,12 +1179,18 @@ impl Session {
     }
 
     /// DC-02 §2.4: decapsulate every record with the seed, derive its would-be label and
-    /// compare in constant time; keep the first match but do the same work for all.
+    /// compare in constant time. The same work is done whether or not a record matches, and
+    /// wherever it sits: the matching record's root and Block are picked up with branch-free
+    /// conditional copies, every record is wiped, and afterwards exactly one root is locked and
+    /// one label derived — the found one, or an all-zero stand-in that is then discarded.
+    /// (A GitHub runner measured the former hit-only `set_root` — a fresh locked page plus a
+    /// label derivation, ~3–4 µs on a ~2.9 ms bucket — with 400 rounds; 6 Oct 2026.)
     #[inline(never)]
     fn match_records_with_seed<I>(&mut self, records: I) -> Result<bool, SessionError>
     where
         I: IntoIterator<Item = ([u8; 32], Zeroizing<Vec<u8>>)>,
     {
+        use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
         let expanded = {
             let seed = self
                 .seed
@@ -1185,7 +1200,11 @@ impl Session {
             bytes.copy_from_slice(seed.as_slice());
             xwing::Expanded::from_seed(&bytes)
         };
-        let mut found: Option<(Root, Zeroizing<Vec<u8>>)> = None;
+        let mut found = Choice::from(0u8);
+        let mut root_acc = Zeroizing::new([0u8; 32]);
+        // One bucket is one size class, so every record has the length of the first; a record
+        // of another length (a misbehaving relay) can never be taken. Lengths are public.
+        let mut block_acc: Option<Zeroizing<Vec<u8>>> = None;
         for (mut l, b) in records {
             let Some(region) = b.get(KEM_OFF..KEM_OFF + KEM_LEN) else {
                 l.zeroize();
@@ -1195,23 +1214,42 @@ impl Session {
             let ss = expanded.decapsulate(region);
             let root = xwing::root_from_shared_secret(&ss);
             let mut label = crate::kdf::derive_label(&root);
-            let hit = ct_eq(&l, &label);
-            if hit && found.is_none() {
-                found = Some((root, b));
+            let acc = block_acc.get_or_insert_with(|| Zeroizing::new(vec![0u8; b.len()]));
+            let same_len = Choice::from((acc.len() == b.len()) as u8);
+            let take = l[..].ct_eq(&label[..]) & !found & same_len;
+            for (x, y) in root_acc.iter_mut().zip(root.as_bytes().iter()) {
+                x.conditional_assign(y, take);
             }
-            // Candidate labels and the record's label are wiped either way (memory gate).
+            if acc.len() == b.len() {
+                for (x, y) in acc.iter_mut().zip(b.iter()) {
+                    x.conditional_assign(y, take);
+                }
+            }
+            found |= take;
+            // Candidate labels and the record's label are wiped either way (memory gate);
+            // `b` (Zeroizing) is wiped when it drops here, for every record alike.
             label.zeroize();
             l.zeroize();
         }
         drop(expanded);
-        match found {
-            Some((root, b)) => {
-                self.set_root(&root)?;
-                self.block = Some(b);
-                self.state = State::Fetched;
-                Ok(true)
+        // Identical finishing work on both outcomes.
+        let candidate = Root::from_bytes(*root_acc);
+        root_acc.zeroize();
+        let buf = self.lock(candidate.as_bytes())?;
+        let label = secret32(crate::kdf::derive_label(&candidate));
+        drop(candidate);
+        if bool::from(found) {
+            if let Some(mut old) = self.root.replace(buf) {
+                old.clear();
             }
-            None => Ok(false),
+            self.label = Some(label);
+            self.block = block_acc;
+            self.state = State::Fetched;
+            Ok(true)
+        } else {
+            // Stored like a hit's buffers (released with the Session), not freed here.
+            let _previous = self.spent.replace((buf, label, block_acc));
+            Ok(false)
         }
     }
 
