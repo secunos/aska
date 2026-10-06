@@ -396,7 +396,15 @@ fn no_secret_in_argv_env_or_files_and_nothing_written() {
     // While it waits for input, inspect what the kernel exposes about it.
     let pid = child.id();
     let cmdline = std::fs::read(format!("/proc/{pid}/cmdline")).unwrap();
-    let environ = std::fs::read(format!("/proc/{pid}/environ")).unwrap();
+    // /proc/PID/environ needs ptrace access. aska makes itself non-dumpable at start, after
+    // which only root may read it — the stronger outcome, and a race with this read when the
+    // tests run as an ordinary user (seen on a GitHub runner, 6 Oct 2026). Check it whenever
+    // it is still readable; "permission denied" means nobody but root can see it at all.
+    let environ = match std::fs::read(format!("/proc/{pid}/environ")) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => Vec::new(),
+        Err(e) => panic!("reading /proc/{pid}/environ: {e}"),
+    };
     let mut si = child.stdin.take().unwrap();
     si.write_all(format!("secret-pass\n{NOTE}\n").as_bytes())
         .unwrap();
