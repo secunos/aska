@@ -9,6 +9,7 @@
 # Needs: python3, xdotool, zbarimg, import (ImageMagick) and a display (Xvfb :96 is started
 # when DISPLAY is unset). Usage: scripts/memory-gate-gui.sh [path/to/aska-gui]
 set -eu
+. "$(dirname "$0")/lib-gui-gate.sh"
 cd "$(dirname "$0")/.."
 BIN="${1:-target/release/aska-gui}"
 # The scanner (scripts/memscan.py) derives R and L with the Python reference; check its
@@ -40,7 +41,7 @@ trap cleanup EXIT
 sleep 1
 "$BIN" >/dev/null 2>&1 &
 GUI=$!
-sleep 9
+wait_for_window 90 || { echo "GATE FAIL: the Aska window did not appear within 90 s"; save_shot "$(basename "$0" .sh)-no-window"; exit 1; }
 xdotool mousemove 380 224 click 1; sleep 2                    # Send a note
 xdotool mousemove 380 220 click 1; xdotool type --delay 20 -- "$MARKER"; sleep 1
 xdotool mousemove 380 400; for _ in 1 2 3 4 5 6; do xdotool click 5; done; sleep 1
@@ -49,7 +50,7 @@ xdotool mousemove 380 597 click 1                              # Seal and post
 sleep 150
 import -window root "$SHOT"
 CARD="$(zbarimg -q --raw "$SHOT" 2>/dev/null | head -1 | tr -d '\n')"
-[ -n "$CARD" ] || { echo "GATE FAIL: no Key Card on screen (did the post succeed?)"; exit 1; }
+[ -n "$CARD" ] || { echo "GATE FAIL: no Key Card on screen (did the post succeed?)"; save_shot memory-gate-gui-no-qr; exit 1; }
 scan() { python3 scripts/memscan.py "$GUI" "$MARKER" "$CARD" "$1" || true; }
 scan "1 hand-over on screen"
 xdotool mousemove 28 27 click 1; sleep 1; xdotool mousemove 28 27 click 1; sleep 2

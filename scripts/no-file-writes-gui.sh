@@ -11,6 +11,7 @@
 # that way. Needs: strace, python3, xdotool, and a display (Xvfb is started when DISPLAY is
 # unset). Usage: scripts/no-file-writes-gui.sh [path/to/aska-gui]
 set -eu
+. "$(dirname "$0")/lib-gui-gate.sh"
 cd "$(dirname "$0")/.."
 BIN="${1:-}"
 if [ -z "$BIN" ]; then
@@ -47,7 +48,7 @@ sleep 1
 # stderr to /dev/null: GTK's own warnings are not the client writing a file.
 strace -f -yy -e trace=%file,write,writev,pwrite64,pwritev,connect -o "$LOG" "$BIN" >/dev/null 2>/dev/null &
 GUI=$!
-sleep 9
+wait_for_window 90 || { echo "GATE FAIL: the Aska window did not appear within 90 s"; save_shot "$(basename "$0" .sh)-no-window"; exit 1; }
 xdotool mousemove 380 224 click 1; sleep 2                    # Send a note
 xdotool mousemove 380 220 click 1; xdotool type --delay 20 -- "file gate: the north gate"; sleep 1
 xdotool mousemove 380 400; for _ in 1 2 3 4 5 6; do xdotool click 5; done; sleep 1
@@ -73,6 +74,7 @@ if command -v zbarimg >/dev/null && command -v import >/dev/null; then
     RECEIVED=1
   else
     echo "note: the Key Card QR could not be read from the screen; Receive half skipped"
+    save_shot no-file-writes-gui-no-qr
   fi
 else
   echo "note: zbarimg/import not installed; Receive half skipped"
