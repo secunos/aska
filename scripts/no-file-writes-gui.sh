@@ -80,6 +80,13 @@ fi
 kill $GUI 2>/dev/null || true
 sleep 1
 
+# strace must have been able to read the traced process. Aska makes itself non-dumpable at
+# start (no core dumps, no other process in its memory), so a tracer that is not root sees bare
+# descriptor numbers and raw buffer addresses instead of labels and paths — and every check
+# below would be blind (a real file write could then pass unseen). Run the gate as root.
+if ! grep -qE '^[0-9]+ +[a-z0-9_]+\([0-9]+<' "$LOG"; then
+  echo "NO-FILE-WRITES (GUI): INCONCLUSIVE (strace could not read the traced process — run this gate as root)"; exit 1
+fi
 FAIL=0
 if grep -E 'openat\(.*O_(WRONLY|RDWR|CREAT|APPEND)' "$LOG" | grep -vE '/dev/null|/proc/|/dev/dri|/dev/shm|/dev/udmabuf'; then
   echo "NO-FILE-WRITES (GUI): FAIL (a file was opened for writing)"; FAIL=1

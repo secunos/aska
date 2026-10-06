@@ -7,8 +7,11 @@
 # droplet and Tor). Usage: scripts/no-file-writes-cli.sh
 set -eu
 cd "$(dirname "$0")/.."
-cargo build --release -p aska >/dev/null 2>&1
-BIN=target/release/aska
+BIN="${1:-}"   # a prebuilt binary (CI builds as the normal user, runs the gate as root)
+if [ -z "$BIN" ]; then
+  cargo build --release -p aska >/dev/null 2>&1
+  BIN=target/release/aska
+fi
 ONION=2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion
 LOG="$(mktemp)"; SEND_OUT="$(mktemp)"; RECV_OUT="$(mktemp)"; SOCKS_OUT="$(mktemp)"
 RELAY_PORT=4597
@@ -54,6 +57,13 @@ ok "$rc" || { echo "GATE FAIL: aska receive exited $rc"; exit 1; }
 grep -q "north gate" "$RECV_OUT" || { echo "GATE FAIL: the note did not come back"; exit 1; }
 cat "$LOG.recv" >>"$LOG"; rm -f "$LOG.recv"
 
+# strace must have been able to read the traced process. Aska makes itself non-dumpable at
+# start (no core dumps, no other process in its memory), so a tracer that is not root sees bare
+# descriptor numbers and raw buffer addresses instead of labels and paths — and every check
+# below would be blind (a real file write could then pass unseen). Run the gate as root.
+if ! grep -qE '^[0-9]+ +[a-z0-9_]+\([0-9]+<' "$LOG"; then
+  echo "NO-FILE-WRITES (CLI): INCONCLUSIVE (strace could not read the traced process — run this gate as root)"; exit 1
+fi
 # Files opened for writing anywhere in either run? (/dev/null, /proc reads and the tty are not files.)
 if grep -E 'openat\(.*O_(WRONLY|RDWR|CREAT|APPEND)' "$LOG" | grep -vE '/dev/null|/dev/tty|/proc/'; then
   echo "NO-FILE-WRITES (CLI): FAIL (a file was opened for writing)"; exit 1
