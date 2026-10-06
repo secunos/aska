@@ -11,6 +11,11 @@
 set -eu
 cd "$(dirname "$0")/.."
 BIN="${1:-target/release/aska-gui}"
+# The scanner (scripts/memscan.py) derives R and L with the Python reference; check its
+# libraries now rather than after five minutes of GUI driving.
+python3 -c "import nacl, argon2, mnemonic" 2>/dev/null || {
+  echo "GATE SETUP: python3 needs pynacl, argon2-cffi and mnemonic"
+  echo "            (Debian/Ubuntu: sudo apt install python3-nacl python3-argon2 python3-mnemonic)"; exit 1; }
 ONION=2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion
 MARKER="MEMGATE-$(head -c 8 /dev/urandom | od -An -tx1 | tr -d ' \n')-the-north-gate"
 export GSK_RENDERER="${GSK_RENDERER:-cairo}" GDK_BACKEND=x11 LANG=C.UTF-8
