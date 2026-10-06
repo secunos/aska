@@ -41,13 +41,21 @@ build)
   if [ "${RELEASE_CONTAINER:-0}" = "1" ]; then
     RT="$(command -v podman || command -v docker)"
     "$RT" build -t aska-release release/
+    # The checkout belongs to the calling user while git in the container runs as root; git
+    # refuses such a repository ("dubious ownership") unless /src is declared safe.
     exec "$RT" run --rm -v "$PWD":/src -w /src -e SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-}" \
+      -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/src \
       aska-release scripts/release.sh "$TAG"
   fi
   # 0. Prerequisites that silently produced an unreproducible alpha when missing (1 Oct 2026):
   #    git (tag check, clean-tree check, SOURCE_DATE_EPOCH) and the pinned toolchain.
   command -v git >/dev/null || { echo "release.sh: git is required (sudo apt install git)" >&2; exit 1; }
-  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "release.sh: not a git checkout — unpack the repository zip (it contains .git) or clone" >&2; exit 1; }
+  if ! GIT_ERR="$(git rev-parse --is-inside-work-tree 2>&1 >/dev/null)"; then
+    echo "release.sh: git does not accept this directory as a checkout:" >&2
+    echo "  $GIT_ERR" | head -3 >&2
+    echo "  (no .git: clone the repository; \"dubious ownership\": run as the files' owner or set safe.directory)" >&2
+    exit 1
+  fi
   WANT="$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)"
   HAVE="$(rustc --version | awk '{print $2}')"
   [ "$HAVE" = "$WANT" ] || { echo "release.sh: rustc $HAVE but rust-toolchain.toml pins $WANT (run: rustup toolchain install $WANT)" >&2; exit 1; }
