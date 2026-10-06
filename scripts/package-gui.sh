@@ -11,15 +11,21 @@ NAME="aska-gui-$VERSION-linux-x86_64"
 SUFFIX="${2:-}"
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --pretty=%ct 2>/dev/null || echo 0)}"
 case "$SOURCE_DATE_EPOCH" in ''|*[!0-9]*) SOURCE_DATE_EPOCH=0;; esac   # no git: epoch 0, never garbage
-cargo build --release --locked -p aska-gui
+# Build paths are rewritten to neutral prefixes in both binaries, so that nothing of the build
+# machine (user name, checkout location) is embedded and a rebuild elsewhere can match byte
+# for byte. The GUI gets its own target directory so these flags do not invalidate the
+# workspace build in target/ (until 6 Oct 2026 the GUI was built without them: its panic
+# locations named /home/<user>/.cargo/registry/...).
+CARGO_HOME_DIR="${CARGO_HOME:-$HOME/.cargo}"
+REMAP="--remap-path-prefix=$PWD=/src --remap-path-prefix=$CARGO_HOME_DIR=/cargo --remap-path-prefix=$HOME=/home"
+CARGO_TARGET_DIR=target-gui RUSTFLAGS="${RUSTFLAGS:-} $REMAP" cargo build --release --locked -p aska-gui
 # The CLI is built static-pie (crt-static) in its own target directory so that it runs on any
 # glibc or musl system; RUSTFLAGS with an explicit --target applies to the crate, not to
-# build scripts, and does not disturb the GUI build above.
-CARGO_HOME_DIR="${CARGO_HOME:-$HOME/.cargo}"
-RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$PWD=/src --remap-path-prefix=$CARGO_HOME_DIR=/cargo --remap-path-prefix=$HOME=/home -C target-feature=+crt-static" \
+# build scripts.
+RUSTFLAGS="${RUSTFLAGS:-} $REMAP -C target-feature=+crt-static" \
   cargo build --release --locked -p aska --target x86_64-unknown-linux-gnu
 rm -rf "dist/$NAME" && mkdir -p "dist/$NAME/bin" "dist/$NAME/share/applications" "dist/$NAME/share/icons/hicolor/scalable/apps"
-cp target/release/aska-gui "dist/$NAME/bin/"
+cp target-gui/release/aska-gui "dist/$NAME/bin/"
 cp target/x86_64-unknown-linux-gnu/release/aska "dist/$NAME/bin/"
 cp deploy/gui/org.aska.Aska.desktop "dist/$NAME/share/applications/"
 cp deploy/gui/org.aska.Aska.svg "dist/$NAME/share/icons/hicolor/scalable/apps/"

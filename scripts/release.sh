@@ -123,7 +123,10 @@ sign)
   done
   minisign -V -p "$PUBFILE" -m "$OUT/$NAME.tar.gz" >/dev/null && echo "release.sh: signatures verify with $PUBFILE"
   # 3. Self-check: the shipped binary must verify itself from inside the unpacked tarball.
-  ( cd "$OUT/$NAME" && ./bin/aska --stdin --yes verify 2>/dev/null | grep -q "status: MATCH" ) \
+  # Read the whole output first: piping into `grep -q` closed the pipe early and the CLI aborted
+  # on the next write ("Aborted" in the log; harmless, CLI fix scheduled for 1.0.1).
+  VERIFY_OUT="$(cd "$OUT/$NAME" && ./bin/aska --stdin --yes verify 2>/dev/null || true)"
+  printf '%s\n' "$VERIFY_OUT" | grep -q "status: MATCH" \
     && echo "release.sh: aska verify → MATCH" || { echo "release.sh: aska verify did NOT report MATCH" >&2; exit 1; }
   cp "$PUBFILE" "$OUT/"
   echo "release.sh: signed release in $OUT"
