@@ -1,0 +1,8 @@
+[toolchain]
+# Pinned Rust release for reproducible builds: an explicit version, so that every machine —
+# developer, owner, CI, the release container — compiles with the same compiler. ("stable"
+# resolved to 1.98.1 on the owner's VM at the alpha and to 1.95.0 elsewhere; that is not a pin.)
+# Update deliberately, in its own reviewed commit, together with release/Dockerfile.
+channel = "1.95.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

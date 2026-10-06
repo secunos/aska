@@ -1,0 +1,88 @@
+aead v0.5.2
+argon2 v0.5.3
+arrayvec v0.7.8
+aska-core v0.1.0 (/home/claude/code/aska/crates/aska-core)
+aska-proto v0.1.0 (/home/claude/code/aska/crates/aska-proto)
+base64ct v1.8.3
+bech32 v0.11.1
+bip39 v2.2.2
+bitcoin_hashes v0.14.101
+blake2 v0.10.6
+block-buffer v0.10.4
+block-buffer v0.12.1
+cfg-if v1.0.5
+chacha20 v0.9.1
+chacha20poly1305 v0.10.1
+cipher v0.4.4
+cipher v0.4.4 (*)
+cmov v0.5.4
+cpufeatures v0.2.17
+cpufeatures v0.3.1
+crypto-common v0.1.7
+crypto-common v0.1.7 (*)
+crypto-common v0.2.2
+crypto-common v0.2.2 (*)
+ctutils v0.4.2
+ctutils v0.4.2 (*)
+curve25519-dalek v5.0.0
+curve25519-dalek v5.0.0 (*)
+curve25519-dalek-derive v0.1.1 (proc-macro)
+data-encoding v2.11.1
+digest v0.10.7
+digest v0.10.7 (*)
+digest v0.11.3
+elligator2 v0.1.0
+fiat-crypto v0.3.0
+generic-array v0.14.7
+generic-array v0.14.7 (*)
+getrandom v0.2.17
+getrandom v0.2.17 (*)
+hex-conservative v0.2.3
+hkdf v0.12.4
+hmac v0.12.1
+hmac v0.12.1 (*)
+hybrid-array v0.4.15
+hybrid-array v0.4.15 (*)
+inout v0.1.4
+keccak v0.1.6
+keccak v0.2.2
+kem v0.3.0
+libc v0.2.189
+minisign-verify v0.3.0
+ml-kem v0.3.2
+module-lattice v0.2.3
+num-traits v0.2.19
+opaque-debug v0.3.1
+password-hash v0.5.0
+poly1305 v0.8.0
+proc-macro2 v1.0.107
+proc-macro2 v1.0.107 (*)
+qrcode v0.14.1
+quote v1.0.47
+quote v1.0.47 (*)
+rand_core v0.10.1
+rand_core v0.6.4
+rand_core v0.6.4 (*)
+serde v1.0.229
+serde_core v1.0.229
+sha2 v0.10.9
+sha2 v0.10.9 (*)
+sha3 v0.10.9
+sha3 v0.11.0
+subtle v2.6.1
+syn v2.0.119
+syn v2.0.119 (*)
+syn v3.0.6
+thiserror v2.0.21
+thiserror v2.0.21 (*)
+thiserror-impl v2.0.21 (proc-macro)
+tinyvec v1.13.3
+typenum v1.20.1
+unicode-ident v1.0.26
+unicode-normalization v0.1.25
+unicode-normalization v0.1.25 (*)
+universal-hash v0.5.1
+x25519-dalek v3.0.0
+zeroize v1.9.0
+zeroize v1.9.0 (*)
+zeroize_derive v1.5.0 (proc-macro)

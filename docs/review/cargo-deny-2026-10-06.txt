@@ -1,0 +1,497 @@
+warning[duplicate]: found 2 duplicate entries for crate 'block-buffer'
+   ┌─ /home/claude/code/aska/Cargo.lock:21:1
+   │  
+21 │ ╭ block-buffer 0.10.4 registry+https://github.com/rust-lang/crates.io-index
+22 │ │ block-buffer 0.12.1 registry+https://github.com/rust-lang/crates.io-index
+   │ ╰─────────────────────────────────────────────────────────────────────────┘ lock entries
+   │  
+   ├ block-buffer v0.10.4
+     └── digest v0.10.7
+         ├── blake2 v0.10.6
+         │   └── argon2 v0.5.3
+         │       └── aska-core v1.0.0
+         │           ├── aska v1.0.0
+         │           └── aska-gui v1.0.0
+         ├── hmac v0.12.1
+         │   ├── aska-core v1.0.0 (*)
+         │   └── hkdf v0.12.4
+         │       └── aska-core v1.0.0 (*)
+         ├── sha2 v0.10.9
+         │   ├── aska-core v1.0.0 (*)
+         │   ├── aska-drop v1.0.0
+         │   │   ├── (dev) aska v1.0.0 (*)
+         │   │   └── (dev) aska-core v1.0.0 (*)
+         │   └── aska-proto v1.0.0
+         │       ├── aska v1.0.0 (*)
+         │       ├── aska-core v1.0.0 (*)
+         │       ├── (dev) aska-drop v1.0.0 (*)
+         │       └── aska-gui v1.0.0 (*)
+         └── sha3 v0.10.9
+             └── aska-core v1.0.0 (*)
+   ├ block-buffer v0.12.1
+     └── digest v0.11.3
+         └── sha3 v0.11.0
+             └── ml-kem v0.3.2
+                 └── aska-core v1.0.0
+                     ├── aska v1.0.0
+                     └── aska-gui v1.0.0
+warning[duplicate]: found 2 duplicate entries for crate 'cpufeatures'
+   ┌─ /home/claude/code/aska/Cargo.lock:37:1
+   │  
+37 │ ╭ cpufeatures 0.2.17 registry+https://github.com/rust-lang/crates.io-index
+38 │ │ cpufeatures 0.3.1 registry+https://github.com/rust-lang/crates.io-index
+   │ ╰───────────────────────────────────────────────────────────────────────┘ lock entries
+   │  
+   ├ cpufeatures v0.2.17
+     ├── argon2 v0.5.3
+     │   └── aska-core v1.0.0
+     │       ├── aska v1.0.0
+     │       └── aska-gui v1.0.0
+     ├── chacha20 v0.9.1
+     │   └── chacha20poly1305 v0.10.1
+     │       └── aska-core v1.0.0 (*)
+     ├── keccak v0.1.6
+     │   └── sha3 v0.10.9
+     │       └── aska-core v1.0.0 (*)
+     ├── poly1305 v0.8.0
+     │   └── chacha20poly1305 v0.10.1 (*)
+     └── sha2 v0.10.9
+         ├── aska-core v1.0.0 (*)
+         ├── aska-drop v1.0.0
+         │   ├── (dev) aska v1.0.0 (*)
+         │   └── (dev) aska-core v1.0.0 (*)
+         └── aska-proto v1.0.0
+             ├── aska v1.0.0 (*)
+             ├── aska-core v1.0.0 (*)
+             ├── (dev) aska-drop v1.0.0 (*)
+             └── aska-gui v1.0.0 (*)
+   ├ cpufeatures v0.3.1
+     ├── curve25519-dalek v5.0.0
+     │   ├── elligator2 v0.1.0
+     │   │   └── aska-core v1.0.0
+     │   │       ├── aska v1.0.0
+     │   │       └── aska-gui v1.0.0
+     │   └── x25519-dalek v3.0.0
+     │       └── aska-core v1.0.0 (*)
+     └── keccak v0.2.2
+         └── sha3 v0.11.0
+             └── ml-kem v0.3.2
+                 └── aska-core v1.0.0 (*)
+warning[duplicate]: found 2 duplicate entries for crate 'crypto-common'
+   ┌─ /home/claude/code/aska/Cargo.lock:39:1
+   │  
+39 │ ╭ crypto-common 0.1.7 registry+https://github.com/rust-lang/crates.io-index
+40 │ │ crypto-common 0.2.2 registry+https://github.com/rust-lang/crates.io-index
+   │ ╰─────────────────────────────────────────────────────────────────────────┘ lock entries
+   │  
+   ├ crypto-common v0.1.7
+     ├── aead v0.5.2
+     │   └── chacha20poly1305 v0.10.1
+     │       └── aska-core v1.0.0
+     │           ├── aska v1.0.0
+     │           └── aska-gui v1.0.0
+     ├── cipher v0.4.4
+     │   ├── chacha20 v0.9.1
+     │   │   └── chacha20poly1305 v0.10.1 (*)
+     │   └── chacha20poly1305 v0.10.1 (*)
+     ├── digest v0.10.7
+     │   ├── blake2 v0.10.6
+     │   │   └── argon2 v0.5.3
+     │   │       └── aska-core v1.0.0 (*)
+     │   ├── hmac v0.12.1
+     │   │   ├── aska-core v1.0.0 (*)
+     │   │   └── hkdf v0.12.4
+     │   │       └── aska-core v1.0.0 (*)
+     │   ├── sha2 v0.10.9
+     │   │   ├── aska-core v1.0.0 (*)
+     │   │   ├── aska-drop v1.0.0
+     │   │   │   ├── (dev) aska v1.0.0 (*)
+     │   │   │   └── (dev) aska-core v1.0.0 (*)
+     │   │   └── aska-proto v1.0.0
+     │   │       ├── aska v1.0.0 (*)
+     │   │       ├── aska-core v1.0.0 (*)
+     │   │       ├── (dev) aska-drop v1.0.0 (*)
+     │   │       └── aska-gui v1.0.0 (*)
+     │   └── sha3 v0.10.9
+     │       └── aska-core v1.0.0 (*)
+     └── universal-hash v0.5.1
+         └── poly1305 v0.8.0
+             └── chacha20poly1305 v0.10.1 (*)
+   ├ crypto-common v0.2.2
+     ├── digest v0.11.3
+     │   └── sha3 v0.11.0
+     │       └── ml-kem v0.3.2
+     │           └── aska-core v1.0.0
+     │               ├── aska v1.0.0
+     │               └── aska-gui v1.0.0
+     └── kem v0.3.0
+         └── ml-kem v0.3.2 (*)
+warning[duplicate]: found 2 duplicate entries for crate 'digest'
+   ┌─ /home/claude/code/aska/Cargo.lock:45:1
+   │  
+45 │ ╭ digest 0.10.7 registry+https://github.com/rust-lang/crates.io-index
+46 │ │ digest 0.11.3 registry+https://github.com/rust-lang/crates.io-index
+   │ ╰───────────────────────────────────────────────────────────────────┘ lock entries
+   │  
+   ├ digest v0.10.7
+     ├── blake2 v0.10.6
+     │   └── argon2 v0.5.3
+     │       └── aska-core v1.0.0
+     │           ├── aska v1.0.0
+     │           └── aska-gui v1.0.0
+     ├── hmac v0.12.1
+     │   ├── aska-core v1.0.0 (*)
+     │   └── hkdf v0.12.4
+     │       └── aska-core v1.0.0 (*)
+     ├── sha2 v0.10.9
+     │   ├── aska-core v1.0.0 (*)
+     │   ├── aska-drop v1.0.0
+     │   │   ├── (dev) aska v1.0.0 (*)
+     │   │   └── (dev) aska-core v1.0.0 (*)
+     │   └── aska-proto v1.0.0
+     │       ├── aska v1.0.0 (*)
+     │       ├── aska-core v1.0.0 (*)
+     │       ├── (dev) aska-drop v1.0.0 (*)
+     │       └── aska-gui v1.0.0 (*)
+     └── sha3 v0.10.9
+         └── aska-core v1.0.0 (*)
+   ├ digest v0.11.3
+     └── sha3 v0.11.0
+         └── ml-kem v0.3.2
+             └── aska-core v1.0.0
+                 ├── aska v1.0.0
+                 └── aska-gui v1.0.0
+warning[duplicate]: found 2 duplicate entries for crate 'keccak'
+   ┌─ /home/claude/code/aska/Cargo.lock:88:1
+   │  
+88 │ ╭ keccak 0.1.6 registry+https://github.com/rust-lang/crates.io-index
+89 │ │ keccak 0.2.2 registry+https://github.com/rust-lang/crates.io-index
+   │ ╰──────────────────────────────────────────────────────────────────┘ lock entries
+   │  
+   ├ keccak v0.1.6
+     └── sha3 v0.10.9
+         └── aska-core v1.0.0
+             ├── aska v1.0.0
+             └── aska-gui v1.0.0
+   ├ keccak v0.2.2
+     └── sha3 v0.11.0
+         └── ml-kem v0.3.2
+             └── aska-core v1.0.0
+                 ├── aska v1.0.0
+                 └── aska-gui v1.0.0
+warning[duplicate]: found 2 duplicate entries for crate 'rand_core'
+    ┌─ /home/claude/code/aska/Cargo.lock:113:1
+    │  
+113 │ ╭ rand_core 0.6.4 registry+https://github.com/rust-lang/crates.io-index
+114 │ │ rand_core 0.10.1 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰──────────────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ rand_core v0.6.4
+      ├── crypto-common v0.1.7
+      │   ├── aead v0.5.2
+      │   │   └── chacha20poly1305 v0.10.1
+      │   │       └── aska-core v1.0.0
+      │   │           ├── aska v1.0.0
+      │   │           └── aska-gui v1.0.0
+      │   ├── cipher v0.4.4
+      │   │   ├── chacha20 v0.9.1
+      │   │   │   └── chacha20poly1305 v0.10.1 (*)
+      │   │   └── chacha20poly1305 v0.10.1 (*)
+      │   ├── digest v0.10.7
+      │   │   ├── blake2 v0.10.6
+      │   │   │   └── argon2 v0.5.3
+      │   │   │       └── aska-core v1.0.0 (*)
+      │   │   ├── hmac v0.12.1
+      │   │   │   ├── aska-core v1.0.0 (*)
+      │   │   │   └── hkdf v0.12.4
+      │   │   │       └── aska-core v1.0.0 (*)
+      │   │   ├── sha2 v0.10.9
+      │   │   │   ├── aska-core v1.0.0 (*)
+      │   │   │   ├── aska-drop v1.0.0
+      │   │   │   │   ├── (dev) aska v1.0.0 (*)
+      │   │   │   │   └── (dev) aska-core v1.0.0 (*)
+      │   │   │   └── aska-proto v1.0.0
+      │   │   │       ├── aska v1.0.0 (*)
+      │   │   │       ├── aska-core v1.0.0 (*)
+      │   │   │       ├── (dev) aska-drop v1.0.0 (*)
+      │   │   │       └── aska-gui v1.0.0 (*)
+      │   │   └── sha3 v0.10.9
+      │   │       └── aska-core v1.0.0 (*)
+      │   └── universal-hash v0.5.1
+      │       └── poly1305 v0.8.0
+      │           └── chacha20poly1305 v0.10.1 (*)
+      └── password-hash v0.5.0
+          └── argon2 v0.5.3 (*)
+    ├ rand_core v0.10.1
+      ├── aska-core v1.0.0
+      │   ├── aska v1.0.0
+      │   └── aska-gui v1.0.0
+      ├── crypto-common v0.2.2
+      │   ├── digest v0.11.3
+      │   │   └── sha3 v0.11.0
+      │   │       └── ml-kem v0.3.2
+      │   │           └── aska-core v1.0.0 (*)
+      │   └── kem v0.3.0
+      │       └── ml-kem v0.3.2 (*)
+      ├── elligator2 v0.1.0
+      │   └── aska-core v1.0.0 (*)
+      ├── kem v0.3.0 (*)
+      ├── ml-kem v0.3.2 (*)
+      └── x25519-dalek v3.0.0
+          └── aska-core v1.0.0 (*)
+warning[duplicate]: found 2 duplicate entries for crate 'sha3'
+    ┌─ /home/claude/code/aska/Cargo.lock:123:1
+    │  
+123 │ ╭ sha3 0.10.9 registry+https://github.com/rust-lang/crates.io-index
+124 │ │ sha3 0.11.0 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰─────────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ sha3 v0.10.9
+      └── aska-core v1.0.0
+          ├── aska v1.0.0
+          └── aska-gui v1.0.0
+    ├ sha3 v0.11.0
+      └── ml-kem v0.3.2
+          └── aska-core v1.0.0
+              ├── aska v1.0.0
+              └── aska-gui v1.0.0
+warning[duplicate]: found 2 duplicate entries for crate 'syn'
+    ┌─ /home/claude/code/aska/Cargo.lock:130:1
+    │  
+130 │ ╭ syn 2.0.119 registry+https://github.com/rust-lang/crates.io-index
+131 │ │ syn 3.0.6 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰───────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ syn v2.0.119
+      ├── curve25519-dalek-derive v0.1.1
+      │   └── curve25519-dalek v5.0.0
+      │       ├── elligator2 v0.1.0
+      │       │   └── aska-core v1.0.0
+      │       │       ├── aska v1.0.0
+      │       │       └── aska-gui v1.0.0
+      │       └── x25519-dalek v3.0.0
+      │           └── aska-core v1.0.0 (*)
+      ├── glib-macros v0.20.12
+      │   └── glib v0.20.12
+      │       ├── cairo-rs v0.20.12
+      │       │   ├── gdk4 v0.9.6
+      │       │   │   ├── gsk4 v0.9.6
+      │       │   │   │   └── gtk4 v0.9.7
+      │       │   │   │       ├── aska-gui v1.0.0 (*)
+      │       │   │   │       └── libadwaita v0.7.2
+      │       │   │   │           └── aska-gui v1.0.0 (*)
+      │       │   │   ├── gtk4 v0.9.7 (*)
+      │       │   │   └── libadwaita v0.7.2 (*)
+      │       │   ├── gsk4 v0.9.6 (*)
+      │       │   └── gtk4 v0.9.7 (*)
+      │       ├── gdk-pixbuf v0.20.10
+      │       │   ├── gdk4 v0.9.6 (*)
+      │       │   └── gtk4 v0.9.7 (*)
+      │       ├── gdk4 v0.9.6 (*)
+      │       ├── gio v0.20.12
+      │       │   ├── gdk-pixbuf v0.20.10 (*)
+      │       │   ├── gdk4 v0.9.6 (*)
+      │       │   ├── gtk4 v0.9.7 (*)
+      │       │   ├── libadwaita v0.7.2 (*)
+      │       │   └── pango v0.20.12
+      │       │       ├── gdk4 v0.9.6 (*)
+      │       │       ├── gsk4 v0.9.6 (*)
+      │       │       ├── gtk4 v0.9.7 (*)
+      │       │       └── libadwaita v0.7.2 (*)
+      │       ├── graphene-rs v0.20.10
+      │       │   ├── gsk4 v0.9.6 (*)
+      │       │   └── gtk4 v0.9.7 (*)
+      │       ├── gsk4 v0.9.6 (*)
+      │       ├── gtk4 v0.9.7 (*)
+      │       ├── libadwaita v0.7.2 (*)
+      │       └── pango v0.20.12 (*)
+      ├── gtk4-macros v0.9.5
+      │   └── gtk4 v0.9.7 (*)
+      └── zeroize_derive v1.5.0
+          └── zeroize v1.9.0
+              ├── argon2 v0.5.3
+              │   └── aska-core v1.0.0 (*)
+              ├── aska v1.0.0 (*)
+              ├── aska-core v1.0.0 (*)
+              ├── aska-drop v1.0.0
+              │   ├── (dev) aska v1.0.0 (*)
+              │   └── (dev) aska-core v1.0.0 (*)
+              ├── aska-gui v1.0.0 (*)
+              ├── bip39 v2.2.2
+              │   └── aska-core v1.0.0 (*)
+              ├── chacha20poly1305 v0.10.1
+              │   └── aska-core v1.0.0 (*)
+              ├── cipher v0.4.4
+              │   ├── chacha20 v0.9.1
+              │   │   └── chacha20poly1305 v0.10.1 (*)
+              │   └── chacha20poly1305 v0.10.1 (*)
+              ├── curve25519-dalek v5.0.0 (*)
+              ├── elligator2 v0.1.0 (*)
+              ├── hybrid-array v0.4.15
+              │   ├── block-buffer v0.12.1
+              │   │   └── digest v0.11.3
+              │   │       └── sha3 v0.11.0
+              │   │           └── ml-kem v0.3.2
+              │   │               └── aska-core v1.0.0 (*)
+              │   ├── crypto-common v0.2.2
+              │   │   ├── digest v0.11.3 (*)
+              │   │   └── kem v0.3.0
+              │   │       └── ml-kem v0.3.2 (*)
+              │   ├── ml-kem v0.3.2 (*)
+              │   └── module-lattice v0.2.3
+              │       └── ml-kem v0.3.2 (*)
+              ├── ml-kem v0.3.2 (*)
+              ├── module-lattice v0.2.3 (*)
+              └── x25519-dalek v3.0.0 (*)
+    ├ syn v3.0.6
+      ├── clap_derive v4.6.7
+      │   └── clap v4.6.7
+      │       ├── aska v1.0.0
+      │       └── aska-drop v1.0.0
+      │           ├── (dev) aska v1.0.0 (*)
+      │           └── (dev) aska-core v1.0.0
+      │               ├── aska v1.0.0 (*)
+      │               └── aska-gui v1.0.0
+      ├── futures-macro v0.3.34
+      │   └── futures-util v0.3.34
+      │       ├── futures-executor v0.3.34
+      │       │   └── glib v0.20.12
+      │       │       ├── cairo-rs v0.20.12
+      │       │       │   ├── gdk4 v0.9.6
+      │       │       │   │   ├── gsk4 v0.9.6
+      │       │       │   │   │   └── gtk4 v0.9.7
+      │       │       │   │   │       ├── aska-gui v1.0.0 (*)
+      │       │       │   │   │       └── libadwaita v0.7.2
+      │       │       │   │   │           └── aska-gui v1.0.0 (*)
+      │       │       │   │   ├── gtk4 v0.9.7 (*)
+      │       │       │   │   └── libadwaita v0.7.2 (*)
+      │       │       │   ├── gsk4 v0.9.6 (*)
+      │       │       │   └── gtk4 v0.9.7 (*)
+      │       │       ├── gdk-pixbuf v0.20.10
+      │       │       │   ├── gdk4 v0.9.6 (*)
+      │       │       │   └── gtk4 v0.9.7 (*)
+      │       │       ├── gdk4 v0.9.6 (*)
+      │       │       ├── gio v0.20.12
+      │       │       │   ├── gdk-pixbuf v0.20.10 (*)
+      │       │       │   ├── gdk4 v0.9.6 (*)
+      │       │       │   ├── gtk4 v0.9.7 (*)
+      │       │       │   ├── libadwaita v0.7.2 (*)
+      │       │       │   └── pango v0.20.12
+      │       │       │       ├── gdk4 v0.9.6 (*)
+      │       │       │       ├── gsk4 v0.9.6 (*)
+      │       │       │       ├── gtk4 v0.9.7 (*)
+      │       │       │       └── libadwaita v0.7.2 (*)
+      │       │       ├── graphene-rs v0.20.10
+      │       │       │   ├── gsk4 v0.9.6 (*)
+      │       │       │   └── gtk4 v0.9.7 (*)
+      │       │       ├── gsk4 v0.9.6 (*)
+      │       │       ├── gtk4 v0.9.7 (*)
+      │       │       ├── libadwaita v0.7.2 (*)
+      │       │       └── pango v0.20.12 (*)
+      │       ├── gio v0.20.12 (*)
+      │       └── glib v0.20.12 (*)
+      ├── serde_derive v1.0.229
+      │   └── serde v1.0.229
+      │       ├── (dev) aska-core v1.0.0 (*)
+      │       └── bip39 v2.2.2
+      │           └── aska-core v1.0.0 (*)
+      ├── thiserror-impl v2.0.21
+      │   └── thiserror v2.0.21
+      │       ├── aska-core v1.0.0 (*)
+      │       └── aska-proto v1.0.0
+      │           ├── aska v1.0.0 (*)
+      │           ├── aska-core v1.0.0 (*)
+      │           ├── (dev) aska-drop v1.0.0 (*)
+      │           └── aska-gui v1.0.0 (*)
+      └── tokio-macros v2.7.2
+          └── tokio v1.53.1
+              ├── (dev) aska v1.0.0 (*)
+              ├── (dev) aska-core v1.0.0 (*)
+              ├── aska-drop v1.0.0 (*)
+              └── aska-proto v1.0.0 (*)
+warning[duplicate]: found 2 duplicate entries for crate 'windows-sys'
+    ┌─ /home/claude/code/aska/Cargo.lock:152:1
+    │  
+152 │ ╭ windows-sys 0.59.0 registry+https://github.com/rust-lang/crates.io-index
+153 │ │ windows-sys 0.61.2 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰────────────────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ windows-sys v0.59.0
+      └── gio-sys v0.20.10
+          ├── gdk-pixbuf-sys v0.20.10
+          │   ├── gdk-pixbuf v0.20.10
+          │   │   ├── gdk4 v0.9.6
+          │   │   │   ├── gsk4 v0.9.6
+          │   │   │   │   └── gtk4 v0.9.7
+          │   │   │   │       ├── aska-gui v1.0.0
+          │   │   │   │       └── libadwaita v0.7.2
+          │   │   │   │           └── aska-gui v1.0.0 (*)
+          │   │   │   ├── gtk4 v0.9.7 (*)
+          │   │   │   └── libadwaita v0.7.2 (*)
+          │   │   └── gtk4 v0.9.7 (*)
+          │   ├── gdk4-sys v0.9.6
+          │   │   ├── gdk4 v0.9.6 (*)
+          │   │   ├── gsk4-sys v0.9.6
+          │   │   │   ├── gsk4 v0.9.6 (*)
+          │   │   │   └── gtk4-sys v0.9.6
+          │   │   │       ├── gtk4 v0.9.7 (*)
+          │   │   │       └── libadwaita-sys v0.7.2
+          │   │   │           └── libadwaita v0.7.2 (*)
+          │   │   ├── gtk4-sys v0.9.6 (*)
+          │   │   └── libadwaita-sys v0.7.2 (*)
+          │   └── gtk4-sys v0.9.6 (*)
+          ├── gdk4-sys v0.9.6 (*)
+          ├── gio v0.20.12
+          │   ├── gdk-pixbuf v0.20.10 (*)
+          │   ├── gdk4 v0.9.6 (*)
+          │   ├── gtk4 v0.9.7 (*)
+          │   ├── libadwaita v0.7.2 (*)
+          │   └── pango v0.20.12
+          │       ├── gdk4 v0.9.6 (*)
+          │       ├── gsk4 v0.9.6 (*)
+          │       ├── gtk4 v0.9.7 (*)
+          │       └── libadwaita v0.7.2 (*)
+          ├── glib v0.20.12
+          │   ├── cairo-rs v0.20.12
+          │   │   ├── gdk4 v0.9.6 (*)
+          │   │   ├── gsk4 v0.9.6 (*)
+          │   │   └── gtk4 v0.9.7 (*)
+          │   ├── gdk-pixbuf v0.20.10 (*)
+          │   ├── gdk4 v0.9.6 (*)
+          │   ├── gio v0.20.12 (*)
+          │   ├── graphene-rs v0.20.10
+          │   │   ├── gsk4 v0.9.6 (*)
+          │   │   └── gtk4 v0.9.7 (*)
+          │   ├── gsk4 v0.9.6 (*)
+          │   ├── gtk4 v0.9.7 (*)
+          │   ├── libadwaita v0.7.2 (*)
+          │   └── pango v0.20.12 (*)
+          ├── gtk4-sys v0.9.6 (*)
+          └── libadwaita-sys v0.7.2 (*)
+    ├ windows-sys v0.61.2
+      ├── anstyle-query v1.1.5
+      │   └── anstream v1.0.0
+      │       └── clap_builder v4.6.7
+      │           └── clap v4.6.7
+      │               ├── aska v1.0.0
+      │               └── aska-drop v1.0.0
+      │                   ├── (dev) aska v1.0.0 (*)
+      │                   └── (dev) aska-core v1.0.0
+      │                       ├── aska v1.0.0 (*)
+      │                       └── aska-gui v1.0.0
+      ├── anstyle-wincon v3.0.11
+      │   └── anstream v1.0.0 (*)
+      ├── mio v1.2.3
+      │   └── tokio v1.53.1
+      │       ├── (dev) aska v1.0.0 (*)
+      │       ├── (dev) aska-core v1.0.0 (*)
+      │       ├── aska-drop v1.0.0 (*)
+      │       └── aska-proto v1.0.0
+      │           ├── aska v1.0.0 (*)
+      │           ├── aska-core v1.0.0 (*)
+      │           ├── (dev) aska-drop v1.0.0 (*)
+      │           └── aska-gui v1.0.0 (*)
+      ├── socket2 v0.6.5
+      │   └── tokio v1.53.1 (*)
+      └── tokio v1.53.1 (*)
+advisories ok, bans ok, licenses ok, sources ok

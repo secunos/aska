@@ -1,0 +1,18 @@
+[package]
+name = "aska-gui"
+description = "Aska graphical client (GTK4 / libadwaita)"
+license = "MIT OR Apache-2.0"
+version.workspace = true
+publish = false   # released as signed tarballs, not on crates.io
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+aska-core = { path = "../aska-core" }
+aska-proto = { path = "../aska-proto" }
+gtk.workspace = true
+adw.workspace = true
+zeroize.workspace = true
+libc.workspace = true

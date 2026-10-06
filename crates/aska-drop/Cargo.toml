@@ -1,0 +1,30 @@
+[package]
+name = "aska-drop"
+description = "Aska Dead Drop relay (ADP/1): RAM-only, onion-only, no logs"
+license = "AGPL-3.0-only"
+version.workspace = true
+publish = false   # released as signed tarballs, not on crates.io
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+name = "aska_drop"
+path = "src/lib.rs"
+
+[[bin]]
+name = "aska-drop"
+path = "src/main.rs"
+
+[dependencies]
+aska-proto = { path = "../aska-proto" }
+clap.workspace = true
+tokio.workspace = true
+sha2.workspace = true
+getrandom.workspace = true
+zeroize.workspace = true
+libc.workspace = true
+
+[dev-dependencies]
+aska-proto = { path = "../aska-proto", features = ["client"] }

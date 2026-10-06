@@ -1,0 +1,19 @@
+## /etc/tor/torrc — Aska Dead Drop relay (onion-only). Tor is a CLIENT + onion service here; no relaying.
+SocksPort 0
+ClientOnly 1
+Log notice file /dev/null
+SafeLogging 1
+AvoidDiskWrites 1
+
+HiddenServiceDir /var/lib/tor/aska-drop/
+HiddenServiceVersion 3
+HiddenServicePort 4567 127.0.0.1:4567
+HiddenServiceNumIntroductionPoints 3
+# DoS defences (RLY-07)
+HiddenServiceEnableIntroDoSDefense 1
+HiddenServiceEnableIntroDoSRatePerSec 25
+HiddenServiceEnableIntroDoSBurstPerSec 200
+HiddenServicePoWDefensesEnabled 1
+HiddenServicePoWQueueRate 250
+HiddenServicePoWQueueBurst 2500
+# Vanguards-lite is default in tor >= 0.4.7; for full vanguards install the `vanguards` add-on (see runbook).

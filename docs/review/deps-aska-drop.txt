@@ -1,0 +1,45 @@
+anstream v1.0.0
+anstyle v1.0.14
+anstyle-parse v1.0.0
+anstyle-query v1.1.5
+aska-drop v0.1.0 (/home/claude/code/aska/crates/aska-drop)
+aska-proto v0.1.0 (/home/claude/code/aska/crates/aska-proto)
+block-buffer v0.10.4
+bytes v1.12.1
+cfg-if v1.0.5
+clap v4.6.7
+clap_builder v4.6.7
+clap_derive v4.6.7 (proc-macro)
+clap_lex v1.1.1
+colorchoice v1.0.5
+cpufeatures v0.2.17
+crypto-common v0.1.7
+digest v0.10.7
+generic-array v0.14.7
+generic-array v0.14.7 (*)
+getrandom v0.2.17
+heck v0.5.0
+is_terminal_polyfill v1.70.2
+libc v0.2.189
+mio v1.2.3
+pin-project-lite v0.2.17
+proc-macro2 v1.0.107
+proc-macro2 v1.0.107 (*)
+quote v1.0.47
+quote v1.0.47 (*)
+sha2 v0.10.9
+sha2 v0.10.9 (*)
+socket2 v0.6.5
+strsim v0.11.1
+syn v2.0.119
+syn v3.0.6
+syn v3.0.6 (*)
+thiserror v2.0.21
+thiserror-impl v2.0.21 (proc-macro)
+tokio v1.53.1
+tokio-macros v2.7.2 (proc-macro)
+typenum v1.20.1
+unicode-ident v1.0.26
+utf8parse v0.2.2
+zeroize v1.9.0
+zeroize_derive v1.5.0 (proc-macro)

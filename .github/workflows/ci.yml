@@ -1,0 +1,45 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libadwaita-1-dev pkg-config xvfb xdotool strace imagemagick zbar-tools
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: cargo test --workspace --locked   # includes the Python interop tests (python3 is on the runner)
+      - run: cargo build --release -p aska-drop --locked && ./scripts/no-writes-check.sh target/release/aska-drop
+      - run: ./scripts/no-file-writes-client.sh
+      - run: ./scripts/no-file-writes-cli.sh
+      - run: ./scripts/no-file-writes-gui.sh
+      - run: ./scripts/timing-parity.sh
+      - run: cargo build --release -p aska-gui --locked && sudo -E env PATH="$PATH" ./scripts/memory-gate-gui.sh target/release/aska-gui   # reads /proc/PID/mem
+  reproducible:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/repro-build.sh && ./scripts/repro-build.sh --compare
+  supply-chain:
+    # Release checklist rows 1.9 and 1.10: advisories, licences, bans, sources; vendored-tree hash.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo install cargo-deny --locked && cargo deny check
+      - run: cargo install cargo-audit --locked && cargo audit
+      - run: ./scripts/vendor-hash.sh
+  release-candidate:
+    # On a tag: build the release candidate in the Debian 13 container (unsigned — signing
+    # happens on the release owner's machine, docs/RELEASING.md §4) and keep it as an artifact
+    # for independent rebuilders to compare against.
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t aska-release release/
+      - run: docker run --rm -v "$PWD":/src -w /src aska-release scripts/release.sh "${GITHUB_REF_NAME}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate-${{ github.ref_name }}
+          path: dist/release/

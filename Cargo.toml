@@ -1,0 +1,52 @@
+[workspace]
+resolver = "2"
+members = ["crates/aska-core", "crates/aska-proto", "crates/aska", "crates/aska-drop", "crates/aska-gui"]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.85"
+authors = ["Aska project"]
+repository = "https://github.com/secunos/aska"
+
+[workspace.dependencies]
+zeroize = { version = "1", features = ["derive"] }
+sha2 = "0.10"
+hmac = "0.12"
+hkdf = "0.12"
+argon2 = { version = "0.5", features = ["std", "zeroize"] }
+chacha20poly1305 = "0.10"
+subtle = "2"
+rand_core = { version = "0.6", features = ["getrandom"] }
+getrandom = "0.2"
+bip39 = { version = "2", default-features = false, features = ["std", "zeroize"] }
+bech32 = "0.11"
+sha3 = "0.10"
+data-encoding = "2"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+# Release signature verification (M7, OPS-03): minisign (Ed25519 over Blake2b-512), pure Rust, no deps.
+minisign-verify = "0.3"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time", "macros", "sync"] }
+clap = { version = "4", features = ["derive"] }
+libc = "0.2"
+qrcode = { version = "0.14", default-features = false }
+# Receiving-key path (DC-02, M5c): X-Wing composed from FIPS 203 ML-KEM + X25519 + SHA3;
+# Elligator2 for the uniform encoding of the X25519 half.
+ml-kem = { version = "0.3.2", default-features = false, features = ["hazmat", "zeroize"] }
+x25519-dalek = { version = "3.0", default-features = false, features = ["static_secrets", "zeroize"] }
+elligator2 = { version = "0.1.0", default-features = false, features = ["keygen"] }
+rand_core10 = { package = "rand_core", version = "0.10", default-features = false }
+# GUI (M5): feature levels are the minimum of the reference platforms (Debian 13 / Tails 7: GTK 4.14, libadwaita 1.5)
+gtk = { package = "gtk4", version = "0.9", features = ["v4_14"] }
+adw = { package = "libadwaita", version = "0.7", features = ["v1_5"] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+debug = false

@@ -1,0 +1,25 @@
+[package]
+name = "aska-proto"
+description = "Aska Dead Drop Protocol (ADP/1) wire encoding shared by client and relay"
+license = "MIT OR Apache-2.0"
+version.workspace = true
+publish = false   # released as signed tarballs, not on crates.io
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+# Async request helpers over any AsyncRead + AsyncWrite (used by the relay tests and by aska-core's
+# Dead Drop client at M3). Off by default so the wire crate itself stays dependency-free.
+client = ["dep:tokio"]
+
+[dependencies]
+sha2.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio.workspace = true
+hex.workspace = true

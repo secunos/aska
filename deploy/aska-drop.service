@@ -1,0 +1,60 @@
+# /etc/systemd/system/aska-drop.service — hardened unit for the Aska Dead Drop relay (RLY-04, RLY-06, RLY-08)
+[Unit]
+Description=Aska Dead Drop relay (ADP/1, loopback only; Tor publishes the onion service)
+After=network-online.target tor.service
+Wants=tor.service
+
+[Service]
+ExecStart=/usr/local/bin/aska-drop serve --port 4567
+Restart=always
+RestartSec=5
+
+# No identity, no writable filesystem, no logs. The relay prints nothing while it runs; the
+# only thing that can ever reach stderr is a one-line reason for a fatal start-up failure or
+# an abort (no Block content, no labels, no peers), and losing that line cost a day of
+# diagnosis once — so stderr goes to the journal, stdout stays closed.
+DynamicUser=yes
+StandardOutput=null
+StandardError=journal
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+NoNewPrivileges=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=localhost
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+# The hardening itself needs these two from @resources (RLIMIT_CORE=0, raise RLIMIT_MEMLOCK).
+SystemCallFilter=setrlimit prlimit64
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+# RAM-only store: keep the process from being swapped or dumped. The relay calls
+# mlockall(MCL_CURRENT|MCL_FUTURE), so EVERY page it maps must fit in RLIMIT_MEMLOCK; the
+# default 8 MiB holds an empty store and then kills the relay (SIGABRT) the first time the
+# store grows past it. The relay refuses to start if this limit is too small for its caps.
+LimitMEMLOCK=infinity
+LimitCORE=0
+
+# Memory cap protects the host; the relay refuses PUTs (ST_FULL) before reaching it.
+# Default caps lock about 35 MiB of Blocks plus ~64 MiB runtime headroom.
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

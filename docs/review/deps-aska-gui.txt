@@ -1,0 +1,158 @@
+aead v0.5.2
+argon2 v0.5.3
+arrayvec v0.7.8
+aska-core v0.1.0 (/home/claude/code/aska/crates/aska-core)
+aska-gui v0.1.0 (/home/claude/code/aska/crates/aska-gui)
+aska-proto v0.1.0 (/home/claude/code/aska/crates/aska-proto)
+aska-proto v0.1.0 (/home/claude/code/aska/crates/aska-proto) (*)
+base64ct v1.8.3
+bech32 v0.11.1
+bip39 v2.2.2
+bitcoin_hashes v0.14.101
+bitflags v2.13.2
+blake2 v0.10.6
+block-buffer v0.10.4
+block-buffer v0.12.1
+cairo-rs v0.20.12
+cairo-rs v0.20.12 (*)
+cairo-sys-rs v0.20.10
+cairo-sys-rs v0.20.10 (*)
+cfg-if v1.0.5
+chacha20 v0.9.1
+chacha20poly1305 v0.10.1
+cipher v0.4.4
+cipher v0.4.4 (*)
+cmov v0.5.4
+cpufeatures v0.2.17
+cpufeatures v0.3.1
+crypto-common v0.1.7
+crypto-common v0.1.7 (*)
+crypto-common v0.2.2
+crypto-common v0.2.2 (*)
+ctutils v0.4.2
+ctutils v0.4.2 (*)
+curve25519-dalek v5.0.0
+curve25519-dalek v5.0.0 (*)
+curve25519-dalek-derive v0.1.1 (proc-macro)
+data-encoding v2.11.1
+digest v0.10.7
+digest v0.10.7 (*)
+digest v0.11.3
+elligator2 v0.1.0
+equivalent v1.0.2
+fiat-crypto v0.3.0
+field-offset v0.3.6
+futures-channel v0.3.34
+futures-channel v0.3.34 (*)
+futures-core v0.3.34
+futures-executor v0.3.34
+futures-io v0.3.34
+futures-macro v0.3.34 (proc-macro)
+futures-task v0.3.34
+futures-util v0.3.34
+futures-util v0.3.34 (*)
+gdk-pixbuf v0.20.10
+gdk-pixbuf v0.20.10 (*)
+gdk-pixbuf-sys v0.20.10
+gdk-pixbuf-sys v0.20.10 (*)
+gdk4 v0.9.6
+gdk4 v0.9.6 (*)
+gdk4-sys v0.9.6
+gdk4-sys v0.9.6 (*)
+generic-array v0.14.7
+generic-array v0.14.7 (*)
+getrandom v0.2.17
+getrandom v0.2.17 (*)
+gio v0.20.12
+gio v0.20.12 (*)
+gio-sys v0.20.10
+gio-sys v0.20.10 (*)
+glib v0.20.12
+glib v0.20.12 (*)
+glib-macros v0.20.12 (proc-macro)
+glib-sys v0.20.10
+glib-sys v0.20.10 (*)
+gobject-sys v0.20.10
+gobject-sys v0.20.10 (*)
+graphene-rs v0.20.10
+graphene-rs v0.20.10 (*)
+graphene-sys v0.20.10
+graphene-sys v0.20.10 (*)
+gsk4 v0.9.6
+gsk4-sys v0.9.6
+gsk4-sys v0.9.6 (*)
+gtk4 v0.9.7
+gtk4 v0.9.7 (*)
+gtk4-macros v0.9.5 (proc-macro)
+gtk4-sys v0.9.6
+gtk4-sys v0.9.6 (*)
+hashbrown v0.17.1
+heck v0.5.0
+hex-conservative v0.2.3
+hkdf v0.12.4
+hmac v0.12.1
+hmac v0.12.1 (*)
+hybrid-array v0.4.15
+hybrid-array v0.4.15 (*)
+indexmap v2.14.2
+inout v0.1.4
+keccak v0.1.6
+keccak v0.2.2
+kem v0.3.0
+libadwaita v0.7.2
+libadwaita-sys v0.7.2
+libc v0.2.189
+memchr v2.8.3
+memoffset v0.9.1
+minisign-verify v0.3.0
+ml-kem v0.3.2
+module-lattice v0.2.3
+num-traits v0.2.19
+opaque-debug v0.3.1
+pango v0.20.12
+pango v0.20.12 (*)
+pango-sys v0.20.10
+pango-sys v0.20.10 (*)
+password-hash v0.5.0
+pin-project-lite v0.2.17
+poly1305 v0.8.0
+proc-macro-crate v3.5.0
+proc-macro-crate v3.5.0 (*)
+proc-macro2 v1.0.107
+proc-macro2 v1.0.107 (*)
+qrcode v0.14.1
+quote v1.0.47
+quote v1.0.47 (*)
+rand_core v0.10.1
+rand_core v0.6.4
+rand_core v0.6.4 (*)
+serde v1.0.229
+serde_core v1.0.229
+sha2 v0.10.9
+sha2 v0.10.9 (*)
+sha3 v0.10.9
+sha3 v0.11.0
+slab v0.4.12
+smallvec v1.16.2
+subtle v2.6.1
+syn v2.0.119
+syn v2.0.119 (*)
+syn v3.0.6
+syn v3.0.6 (*)
+thiserror v2.0.21
+thiserror v2.0.21 (*)
+thiserror-impl v2.0.21 (proc-macro)
+tinyvec v1.13.3
+toml_datetime v1.1.1+spec-1.1.0
+toml_edit v0.25.15+spec-1.1.0
+toml_parser v1.1.3+spec-1.1.0
+typenum v1.20.1
+unicode-ident v1.0.26
+unicode-normalization v0.1.25
+unicode-normalization v0.1.25 (*)
+universal-hash v0.5.1
+winnow v1.0.4
+x25519-dalek v3.0.0
+zeroize v1.9.0
+zeroize v1.9.0 (*)
+zeroize_derive v1.5.0 (proc-macro)

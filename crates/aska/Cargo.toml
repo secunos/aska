@@ -1,0 +1,22 @@
+[package]
+name = "aska"
+description = "Aska command-line client"
+license = "MIT OR Apache-2.0"
+version.workspace = true
+publish = false   # released as signed tarballs, not on crates.io
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+aska-core = { path = "../aska-core" }
+aska-proto = { path = "../aska-proto" }
+clap.workspace = true
+zeroize.workspace = true
+libc.workspace = true
+data-encoding.workspace = true
+
+[dev-dependencies]
+aska-drop = { path = "../aska-drop" }
+tokio.workspace = true

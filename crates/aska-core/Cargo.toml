@@ -1,0 +1,41 @@
+[package]
+name = "aska-core"
+description = "Aska core library: Block Format v1, keys and Shares, Dead Drop client, Session (the only place secrets live)"
+license = "MIT OR Apache-2.0"
+version.workspace = true
+publish = false   # released as signed tarballs, not on crates.io
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+aska-proto = { path = "../aska-proto" }
+libc.workspace = true
+zeroize.workspace = true
+sha2.workspace = true
+hmac.workspace = true
+hkdf.workspace = true
+argon2.workspace = true
+chacha20poly1305.workspace = true
+subtle.workspace = true
+getrandom.workspace = true
+bip39.workspace = true
+bech32.workspace = true
+sha3.workspace = true
+data-encoding.workspace = true
+thiserror.workspace = true
+unicode-normalization = "0.1"
+qrcode.workspace = true
+ml-kem.workspace = true
+x25519-dalek.workspace = true
+elligator2.workspace = true
+rand_core10.workspace = true
+minisign-verify.workspace = true
+
+[dev-dependencies]
+aska-drop = { path = "../aska-drop" }
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+hex.workspace = true

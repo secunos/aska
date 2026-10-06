@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Aska
+Comment=Send a note that leaves nothing behind
+Exec=aska-gui
+Icon=org.aska.Aska
+Terminal=false
+Categories=Network;Utility;
+Keywords=note;secure;tor;
+StartupNotify=false
+SingleMainWindow=true
