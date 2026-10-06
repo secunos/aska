@@ -148,15 +148,21 @@ fn mann_whitney_sanity() {
 }
 
 /// DC-02 gate (c): receiving-side matching by decapsulation does the same work for every
-/// Block, whether or not one matches. A bucket of 20 random Blocks plus one KEM Block is
-/// matched with the right seed (hit) and with another seed (no hit); the two timings must be
+/// Block, whether or not one matches. ONE seed is matched against two buckets that differ in a
+/// single record: the hit bucket holds 20 random Blocks plus the KEM Block sealed for that
+/// seed, the miss bucket the same 20 plus a random Block in its place. The two timings must be
 /// indistinguishable.
+///
+/// (Until 6 Oct 2026 the miss side used a second seed. Decapsulation time varies by a few
+/// microseconds from key to key — public-key-dependent, the same for every record of one
+/// receiver, so it reveals nothing about which record matched — but over 21 records two random
+/// keys can differ by tens of microseconds, and the old test failed whenever it drew such a
+/// pair: it compared two keys, not a hit with a miss. Observed on a GitHub runner.)
 #[test]
 #[ignore = "slow; run by scripts/timing-parity.sh"]
 fn seed_matching_time_does_not_depend_on_a_match() {
     use aska_core::rng::{OsRng, RandomSource};
     let words = aska_core::xwing::new_seed_words().unwrap();
-    let other = aska_core::xwing::new_seed_words().unwrap();
     let rk = aska_core::xwing::receiving_key_from_words(&words, &[], None, None).unwrap();
     let askar = rk.encode().unwrap();
     let mut s = Session::new(cfg()).unwrap();
@@ -165,29 +171,35 @@ fn seed_matching_time_does_not_depend_on_a_match() {
     s.seal(Level::Quick).unwrap();
     let (label, block) = s.sealed_block().unwrap();
     let block = block.to_vec();
-    let mut bucket: Vec<([u8; 32], Vec<u8>)> = (0..20)
+    let mut miss_bucket: Vec<([u8; 32], Vec<u8>)> = (0..20)
         .map(|_| (OsRng.array().unwrap(), OsRng.bytes(block.len()).unwrap()))
         .collect();
-    bucket.insert(10, (label, block));
+    let mut hit_bucket = miss_bucket.clone();
+    hit_bucket.insert(10, (label, block.clone()));
+    miss_bucket.insert(
+        10,
+        (OsRng.array().unwrap(), OsRng.bytes(block.len()).unwrap()),
+    );
 
-    let time_match = |seed_words: &str| -> f64 {
+    let time_match = |bucket: &Vec<([u8; 32], Vec<u8>)>, expect: bool| -> f64 {
         let mut r = Session::new(cfg()).unwrap();
-        r.add_receiving_seed(seed_words).unwrap();
+        r.add_receiving_seed(&words).unwrap();
         let t = Instant::now();
-        let _ = r.accept_bucket(bucket.iter().cloned()).unwrap();
+        let matched = r.accept_bucket(bucket.iter().cloned()).unwrap();
         let dt = t.elapsed().as_secs_f64();
+        assert_eq!(matched, expect);
         r.close();
         dt
     };
-    let n = 60;
+    let n = 400; // ~3 ms per round; enough rounds to see a 20 µs effect through CI noise
     let (mut hit, mut miss) = (Vec::with_capacity(n), Vec::with_capacity(n));
     for i in 0..n {
         if i % 2 == 0 {
-            hit.push(time_match(&words));
-            miss.push(time_match(&other));
+            hit.push(time_match(&hit_bucket, true));
+            miss.push(time_match(&miss_bucket, false));
         } else {
-            miss.push(time_match(&other));
-            hit.push(time_match(&words));
+            miss.push(time_match(&miss_bucket, false));
+            hit.push(time_match(&hit_bucket, true));
         }
     }
     let p = mann_whitney_p(&hit, &miss);
