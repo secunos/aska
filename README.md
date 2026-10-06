@@ -23,7 +23,7 @@ draft-11 vector reproduced) with the X25519 half written as an Elligator2 repres
 KEM Block looks like any other. CLI and GUI both do it; all gates pass, plus new ones for
 uniformity, matching timing and receiving-key memory. **M6 first runs done (Ubuntu stand-in
 for Debian; Tails and Qubes checklists still open → release gate), three packaging fixes. M7
-release engineering done: signed releases (`docs/RELEASING.md`), `v0.1.0-alpha` owner-signed. M8: Security Review Package, Legal Review Brief and Release Checklist issued; internal pre-review done (2 High, 11 Medium fixed; `docs/Aska_Internal_PreReview_Report_v0.1.md`), Block Format draft 0.5 (`docs/Aska_Security_Review_Package_v0.1.md`, `docs/Aska_Legal_Review_Brief_v0.1.md`, `docs/Aska_Release_Checklist_v0.2.md`). **Releasing 1.0.0** (owner decision 6 Oct 2026, external reviews waived — see `SECURITY.md`): documentation and release metadata done; signed build, platform gate A + B and publication on GitHub follow.**
+release engineering done: signed releases (`docs/RELEASING.md`), `v0.1.0-alpha` owner-signed. M8: Security Review Package, Legal Review Brief and Release Checklist issued; internal pre-review done (2 High, 11 Medium fixed; `docs/Aska_Internal_PreReview_Report_v0.1.md`), Block Format draft 0.5 (`docs/Aska_Security_Review_Package_v0.1.md`, `docs/Aska_Legal_Review_Brief_v0.1.md`, `docs/Aska_Release_Checklist_v0.2.md`). **Aska 1.0.0 released 6 Oct 2026** — signed, verified independently, smoke-tested on Debian 13 (`docs/releases/v1.0.0.md`); external security and legal reviews not done (see `SECURITY.md`).**
 Plan: `docs/Aska_Prototype_Plan_v0.1.md`.
 
 ## Workspace

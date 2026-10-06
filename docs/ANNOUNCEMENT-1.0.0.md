@@ -1,8 +1,8 @@
-# Aska 1.0.0 — release announcement (draft; fingerprints filled in at signing)
+# Aska 1.0.0 — release announcement
 
 **Aska** sends a short note to one person or a small group in a way that leaves nothing behind. The note is encrypted on your computer with quantum-resistant cryptography, parked as unreadable noise on a relay reachable only through Tor, fetched by the receiver, shown once, and gone. There is no account, no history, no contacts, no log, and nothing is written to disk.
 
-This is the first release. Linux x86-64 only: Debian 13, Ubuntu 24.04+, Tails 7, Qubes OS 4.3 (Whonix).
+This is the first release. Linux x86-64 only: Debian 13, Ubuntu 24.04+, Tails 7, Qubes OS 4.3 (Whonix). **Tested on the signed release:** Debian 13 (install, self-verification, send and receive over Tor with and without a passphrase). Tails 7 and Qubes OS are supported by design and were exercised on development builds, but **not re-tested on this signed release** — please report how it goes.
 
 ## What is in it
 
@@ -35,12 +35,12 @@ Before you download, obtain these from a source you trust that is not the downlo
 
 ```
 Tarball        aska-gui-1.0.0-linux-x86_64.tar.gz
-SHA-256        <filled in at signing>
+SHA-256        53ca86eda671a36206b9a7fc4959acd3cd414bc1676323c5ebbb1ce17e2cade0
 Relay binary   aska-drop-1.0.0-linux-x86_64
-SHA-256        <filled in at signing>
+SHA-256        2e36b4cc315681594667b4385851836da77dcc887bda160c1bc36d86febcd088
 Signing key    79AD6224AFF176C9
 Public key     RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox
-Rekor entry    <filled in at signing, or "none">
+Rekor entry    none for this release
 ```
 
 Then: `sha256sum` the tarball and compare; `minisign -V -P <public key> -m <tarball>`; unpack; `./bin/aska verify` must say MATCH; `./install.sh`. The User Guide (`docs/USER_GUIDE.md` inside the tarball) has the full procedure, and the Relay Operator Guide is in `aska-drop-deploy-1.0.0.tar.gz`.

@@ -29,14 +29,14 @@
 
 | # | Item | Gate | Evidence | Result |
 |---|---|---|---|---|
-| 2.1 | Built in the Debian 13 release container (`RELEASE_CONTAINER=1 scripts/release.sh <tag>`), toolchain exactly `rust-toolchain.toml` (1.95.0) | GATE | `RELEASE-NOTES.txt` toolchain line | ☐ open — alpha built on Ubuntu 26.04 with 1.98.1 (recorded deviation) |
+| 2.1 | Built in the Debian 13 release container (`RELEASE_CONTAINER=1 scripts/release.sh <tag>`), toolchain exactly `rust-toolchain.toml` (1.95.0) | GATE | `RELEASE-NOTES.txt` toolchain line | ✔ v1.0.0 with rustc 1.95.0 on native Debian 13 (the container's distribution), not in the container — recorded deviation (`docs/releases/v1.0.0.md`) |
 | 2.2 | A second build in the same container image by a different person matches `SHA256SUMS` byte for byte (independent rebuilder, Prototype Plan §1) | GATE for final; record for rc | rebuilder's `SHA256SUMS` | ☐ open |
-| 2.3 | Signed by the owner's release key (`79AD6224AFF176C9`) on the owner's machine; secret key never on a shared folder or in CI | GATE | `release.sh --sign` output; key id in notes | ✔ alpha (key rotated 1 Oct; bootstrap key retired) |
-| 2.4 | `release.sh --sign` ended with `aska verify → MATCH` | GATE | output | ✔ alpha |
-| 2.5 | Independent verification with the public key only, on another machine: `sha256sum -c`, `minisign -V` × 3, `SHA256SUMS` inside the tarball, `bin/aska verify` → MATCH | GATE | `docs/releases/<tag>.md` | ✔ alpha (developer, 1 Oct) |
-| 2.6 | Rekor transparency entry recorded for the tarball signature (`release.sh --rekor`) and written into `RELEASE-NOTES.txt` | GATE from rc1 (OPS-03) | `REKOR.txt` | ☐ open (no `rekor-cli` yet) |
-| 2.7 | `RELEASE-NOTES.txt` complete: commit, toolchain, epoch, key id, file list, Rekor entry, verification instructions | GATE | file | ☐ (alpha notes had empty commit/epoch — tooling fixed) |
-| 2.8 | Release record `docs/releases/<tag>.md` written: hashes, who built, who signed, who verified, deviations | — | file | ✔ alpha |
+| 2.3 | Signed by the owner's release key (`79AD6224AFF176C9`) on the owner's machine; secret key never on a shared folder or in CI | GATE | `release.sh --sign` output; key id in notes | ✔ v1.0.0 (6 Oct) |
+| 2.4 | `release.sh --sign` ended with `aska verify → MATCH` | GATE | output | ✔ v1.0.0 |
+| 2.5 | Independent verification with the public key only, on another machine: `sha256sum -c`, `minisign -V` × 4, `SHA256SUMS` inside the tarball, `bin/aska verify` → MATCH; no build-machine paths in the binaries | GATE | `docs/releases/<tag>.md` | ✔ v1.0.0 (developer, 6 Oct) |
+| 2.6 | Rekor transparency entry recorded for the tarball signature (`release.sh --rekor`) and written into `RELEASE-NOTES.txt` | GATE from rc1 (OPS-03) | `REKOR.txt` | ☐ open — none for v1.0.0 (no `rekor-cli`); recorded in the release record |
+| 2.7 | `RELEASE-NOTES.txt` complete: commit, toolchain, epoch, key id, file list, Rekor entry, verification instructions | GATE | file | ✔ v1.0.0 (commit 48e34b3, epoch, vendor hash, key id; Rekor "(filled in by --rekor)") |
+| 2.8 | Release record `docs/releases/<tag>.md` written: hashes, who built, who signed, who verified, deviations | — | file | ✔ v1.0.0 |
 
 # 3. Platform gate (rc1 and every release that changes `crates/`) — owner
 
@@ -44,10 +44,10 @@ All on the **signed tarball of this release**, following `Aska_Platform_Validati
 
 | # | Item | Gate | Result |
 |---|---|---|---|
-| 3.1 | Checklist A on **Debian 13** (GNOME Wayland), A1–A21 including the real A17 (Xorg session) | GATE | ☐ open (A run once on Ubuntu 26.04, no per-line record) |
-| 3.2 | Checklist B on **Tails 7** from a USB stick, B1–B13, **zero deviations** (Prototype Plan M6 gate) | GATE | ☐ open (B1–B2 reached on 1 Oct; discontinued) |
-| 3.3 | Checklist C on **Qubes 4.3 simple mode** (disposable Whonix-Workstation), C1–C6 | GATE | ☐ open |
-| 3.4 | Checklist D on **Qubes 4.3 split mode** incl. KEM Blocks offline (`aska open … --receiving-seed`), D1–D6 | GATE | ☐ open |
+| 3.1 | Checklist A on **Debian 13** (GNOME Wayland), A1–A21 including the real A17 (Xorg session) | GATE | ☐ not run on v1.0.0 — Debian 13 smoke test only (owner decision 6 Oct): install, verify MATCH, GUI send/receive, wrong passphrase, reachability ✔ |
+| 3.2 | Checklist B on **Tails 7** from a USB stick, B1–B13, **zero deviations** (Prototype Plan M6 gate) | GATE | ☐ not run on v1.0.0 (owner decision 6 Oct) |
+| 3.3 | Checklist C on **Qubes 4.3 simple mode** (disposable Whonix-Workstation), C1–C6 | GATE | ☐ not run on v1.0.0 (owner decision 6 Oct) |
+| 3.4 | Checklist D on **Qubes 4.3 split mode** incl. KEM Blocks offline (`aska open … --receiving-seed`), D1–D6 | GATE | ☐ not run on v1.0.0 (owner decision 6 Oct) |
 | 3.5 | Doctor trigger matrix (Checklists §6) walked on at least one platform; the two known-gap rows (portal recorder, AT-SPI) recorded as such | GATE | ☐ open |
 | 3.6 | GUI visual checks (Checklists §7) | — | ☐ open |
 | 3.7 | Findings from the runs fixed or accepted with rationale; the checklist document updated (§8 records, §9 gaps) | GATE | ☐ |
@@ -82,7 +82,7 @@ All on the **signed tarball of this release**, following `Aska_Platform_Validati
 | 6.1 | All rc findings closed; no code change since the last full platform gate, or the gate re-run | GATE | ☐ |
 | 6.2 | Fingerprints (tarball, `bin/aska-gui`), key id and Rekor entry handed to the circle **out of band** before the files are made available (Client Design §9.4) | GATE | ☐ |
 | 6.3 | The relay operator(s) upgraded per `deploy/DEPLOY.md`; the onion address rotated if it was ever written down where it should not have been | — | ☐ |
-| 6.4 | Hosting chosen and `repository` in `Cargo.toml` set; the release published as `dist/release/<tag>/` unchanged | — | ✔ GitHub `secunos/aska`, `Cargo.toml` set (6 Oct); publication ☐ (step 5) |
+| 6.4 | Hosting chosen and `repository` in `Cargo.toml` set; the release published as `dist/release/<tag>/` unchanged | — | ✔ GitHub `secunos/aska`; release page at publication |
 | 6.5 | Announcement states what the release does **not** promise: residual risks (Client Design §7), known gaps (Review Package §6), "never install an update because software told you one exists", and the absence of independent security and legal review | — | ✔ draft `docs/ANNOUNCEMENT-1.0.0.md` (fingerprints filled at signing) |
 
 # 7. Record
