@@ -22,7 +22,7 @@ pub fn show_material(
     machine_key: &str,
 ) -> CmdResult {
     if !ctx.input.is_interactive() {
-        println!("{machine_key} {text}");
+        out!("{machine_key} {text}")?;
         return Ok(());
     }
     let rendered = ctx.render_material(text)?;
@@ -62,15 +62,15 @@ pub fn hand_over(
             let words = s.hand_over_words()?;
             if let Some(p) = out_keycard {
                 ctx.write_named(p, &card)?;
-                eprintln!(
+                note!(
                     "Key Card written to {} (you asked for it; delete it when handed over).",
                     p.display()
                 );
             }
             if !ctx.input.is_interactive() {
-                println!("KEYCARD {}", card.as_str());
-                println!("WORDS {}", words.as_str());
-                println!("RELAYS {}", relays.join(","));
+                out!("KEYCARD {}", card.as_str())?;
+                out!("WORDS {}", words.as_str())?;
+                out!("RELAYS {}", relays.join(","))?;
                 return Ok(());
             }
             let wb = crate::term::words_block(&words);
@@ -100,7 +100,7 @@ pub fn hand_over(
                 let text = s.share_text(i)?;
                 let who = for_labels.get(i).map(|l| l.as_str()).unwrap_or("(unnamed)");
                 if !ctx.input.is_interactive() {
-                    println!("SHARE {}/{} {}", i + 1, count, text.as_str());
+                    out!("SHARE {}/{} {}", i + 1, count, text.as_str())?;
                     continue;
                 }
                 let title = format!("Share {} of {} — for: {who}", i + 1, count);
@@ -116,7 +116,7 @@ pub fn hand_over(
                 show_material(ctx, s, &title, &text, &notes, footer, "SHARE")?;
             }
             if !ctx.input.is_interactive() {
-                println!("RELAYS {}", relays.join(","));
+                out!("RELAYS {}", relays.join(","))?;
             }
         }
     }

@@ -1,6 +1,6 @@
 # Aska — User Guide
 
-## Version 1.0 — for Aska 1.0.0 (Linux x86-64)
+## Version 1.0.1 — for Aska 1.0.1 (Linux x86-64)
 
 Aska sends a short note to one person, or to a small group, in a way that leaves nothing behind. The note is encrypted on your computer, parked as unreadable noise on a relay that is reachable only through Tor, fetched by the receiver, shown on their screen, and gone. Aska keeps no history, no contacts, no account, no log, and writes nothing to disk unless you ask it to.
 
@@ -14,7 +14,7 @@ This guide tells you what you need, how to check that the copy you have is the r
 
 **What Aska cannot do.** It cannot protect a note from the person you send it to, from a camera pointed at the screen, or from a computer that is already compromised by someone else. It cannot stop you from saving a key to a file or reading the words over a channel that is being listened to. It cannot make Tor work on a network that blocks Tor. These limits are spelled out in section 9; the short version is that Aska protects the *message* and the *trail* — the two ends are yours to protect.
 
-**The status of this release.** Aska 1.0.0 has been through the project's own internal security review (its report is published with the source) and the gates listed in the release record. It has **not** been reviewed by an independent security auditor, and it has not had a legal review in any jurisdiction. The owner of the project chose to release it on that basis. If your safety depends on this software, weigh that fact.
+**The status of this release.** Aska 1.0.1 has been through the project's own internal security review (its report is published with the source) and the gates listed in the release record. It has **not** been reviewed by an independent security auditor, and it has not had a legal review in any jurisdiction. The owner of the project chose to release it on that basis. If your safety depends on this software, weigh that fact.
 
 ---
 
@@ -40,7 +40,7 @@ A tool like this is only worth having if the copy you run is the copy the projec
 
 ## 3.1 Get the fingerprint first, then the files
 
-For a user the release is one tarball, `aska-gui-1.0.0-linux-x86_64.tar.gz`, and three small companion files: `aska-gui-1.0.0-linux-x86_64.tar.gz.minisig` (its signature), `SHA256SUMS.txt` and `SHA256SUMS.txt.minisig`. The release page also carries the public key file, `RELEASE-NOTES.txt`, and — for relay operators — the relay binary `aska-drop-1.0.0-linux-x86_64`, the deploy tarball `aska-drop-deploy-1.0.0.tar.gz` and their signatures.
+For a user the release is one tarball, `aska-gui-1.0.1-linux-x86_64.tar.gz`, and three small companion files: `aska-gui-1.0.1-linux-x86_64.tar.gz.minisig` (its signature), `SHA256SUMS.txt` and `SHA256SUMS.txt.minisig`. The release page also carries the public key file, `RELEASE-NOTES.txt`, and — for relay operators — the relay binary `aska-drop-1.0.1-linux-x86_64`, the deploy tarball `aska-drop-deploy-1.0.1.tar.gz` and their signatures.
 
 Before you download anything, obtain the release **fingerprint** — the SHA-256 of the tarball, 64 hexadecimal characters — from a source you trust that is **not** the download site: the person who introduced you to Aska, on paper, read over a call, or exchanged in person. The project also publishes its signing key id, `79AD6224AFF176C9`, and the public key
 
@@ -57,7 +57,7 @@ Then download the four files from the project's release page, `https://github.co
 In a terminal, in the folder with the downloaded files:
 
 ```bash
-sha256sum aska-gui-1.0.0-linux-x86_64.tar.gz
+sha256sum aska-gui-1.0.1-linux-x86_64.tar.gz
 ```
 
 The 64-character value must be **identical** to the fingerprint you obtained out of band. If it is not, stop: delete the file and ask your source again. Do not "try it anyway".
@@ -65,7 +65,7 @@ The 64-character value must be **identical** to the fingerprint you obtained out
 If you have `minisign` installed (`sudo apt install minisign`), also check the signature with the public key from above:
 
 ```bash
-minisign -V -P RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox -m aska-gui-1.0.0-linux-x86_64.tar.gz
+minisign -V -P RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox -m aska-gui-1.0.1-linux-x86_64.tar.gz
 ```
 
 It must say `Signature and comment signature verified`. The comment names the release tag.
@@ -73,15 +73,15 @@ It must say `Signature and comment signature verified`. The comment names the re
 ## 3.3 Unpack and install
 
 ```bash
-tar -xzf aska-gui-1.0.0-linux-x86_64.tar.gz
-cd aska-gui-1.0.0-linux-x86_64
+tar -xzf aska-gui-1.0.1-linux-x86_64.tar.gz
+cd aska-gui-1.0.1-linux-x86_64
 sha256sum -c SHA256SUMS            # both lines: OK
 ./install.sh
 ```
 
 `install.sh` copies `aska` and `aska-gui` to `~/.local/bin`, a desktop entry and icon to `~/.local/share`, and the signed hash list to `~/.local/share/aska` so the application can verify itself later, and refreshes your desktop's application cache (`mimeinfo.cache`). It writes nothing else and never asks for a password. To uninstall, delete those files.
 
-**On Tails, do not run `install.sh`.** Unpack into `~/aska` (which is in RAM) and run `~/aska/aska-gui-1.0.0-linux-x86_64/bin/aska-gui` from there; everything disappears at shutdown, which is the point of Tails. The USB stick that carries the tarball to Tails must be formatted **FAT32** — Tails does not mount exFAT, the default for large sticks on Windows.
+**On Tails, do not run `install.sh`.** Unpack into `~/aska` (which is in RAM) and run `~/aska/aska-gui-1.0.1-linux-x86_64/bin/aska-gui` from there; everything disappears at shutdown, which is the point of Tails. The USB stick that carries the tarball to Tails must be formatted **FAT32** — Tails does not mount exFAT, the default for large sticks on Windows.
 
 ## 3.4 First start
 
@@ -248,7 +248,7 @@ The gear opens **Settings**.
 8. **Reused receiving keys.** Whoever learns the seed reads every note still on the relay for that key. Create a new key after each use.
 9. **Compelled disclosure.** The decoy and distress features give you a plausible note to show and a way to destroy the real one. Whether using them is lawful where you are has not been reviewed by this project. Destroying evidence can be a crime.
 10. **Statistical observation of a relay.** An observer who collects a very large number of Blocks from one relay could, in principle, estimate what fraction were sent to receiving keys — never which ones, and never their contents. Accepted for 1.0 and documented for review.
-11. **The 1.0.0 release has not been independently audited.** See section 1.
+11. **The 1.0 releases have not been independently audited.** See section 1.
 
 Rules of thumb: use Tails for anything that matters; set short TTLs; use a passphrase when the key crosses a channel you do not fully trust; never save key material; burn the note as soon as you have read it; confirm the check for receiving keys; and **never install an update because software told you one exists** — Aska will never tell you to, and a message claiming to be from Aska that does is a lie. Get the new fingerprint from your trusted source and repeat section 3.
 
@@ -296,7 +296,7 @@ aska --profile ~/circle.aska send              # use it
 
 Global options: `--relay` (repeatable), `--profile FILE`, `--socks HOST:PORT` (default 127.0.0.1:9050) or `--tor-browser` (127.0.0.1:9150), `-y`/`--yes` to acknowledge warnings (a success then exits 2), `--accept-unlocked-memory`, `--qr half|ascii|none`, `--idle SECONDS`, `--scan-cmd CMD`. `aska --help` and `aska <command> --help` are the full reference.
 
-Exit codes: 0 success · 2 success after acknowledged warnings · 3 you declined · 4 relay unreachable or full · 5 nothing found or opened · 6 refused (not through Tor, or a relay that is not a `.onion`) · 1 other error.
+Exit codes: 0 success · 2 success after acknowledged warnings · 3 you declined · 4 relay unreachable or full · 5 nothing found or opened · 6 refused (not through Tor, or a relay that is not a `.onion`) · 141 output closed early, e.g. by `| head` (1.0.1 and later) · 1 other error.
 
 ---
 

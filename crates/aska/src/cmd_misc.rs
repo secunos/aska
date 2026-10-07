@@ -138,10 +138,10 @@ pub fn key_receive(ctx: &mut Ctx, from_words: bool) -> CmdResult {
     let check = rk.check();
     if !ctx.input.is_interactive() {
         if !from_words {
-            println!("SEED {}", words.as_str());
+            out!("SEED {}", words.as_str())?;
         }
-        println!("RECEIVING {text}");
-        println!("CHECK {check}");
+        out!("RECEIVING {text}")?;
+        out!("CHECK {check}")?;
         return Ok(());
     }
     if !from_words {
@@ -178,8 +178,8 @@ pub fn key_receive(ctx: &mut Ctx, from_words: bool) -> CmdResult {
                 .join(", ")
         )
     };
-    println!("{text}");
-    eprintln!(
+    out!("{text}")?;
+    note!(
         "\nReceiving Key ({} characters), check: {check}\n{relay_note}\n\
          Give the key to the sender by any channel and confirm the check with them by another.",
         text.len()
@@ -201,7 +201,7 @@ fn raw_client(ctx: &Ctx) -> (TorConnector, CancelToken) {
 fn delay(ctx: &Ctx) {
     if !ctx.fast {
         let d = real_request_delay(Duration::from_secs(90), &mut OsRng);
-        eprintln!("(cover delay {} s)", d.as_secs());
+        note!("(cover delay {} s)", d.as_secs());
         std::thread::sleep(d);
     }
 }
@@ -225,13 +225,13 @@ pub fn drop_info(ctx: &mut Ctx, onion: &str) -> CmdResult {
     let info = client
         .info(&relay)
         .map_err(|e| Fail::new(exit::RELAY, format!("INFO failed: {e}")))?;
-    println!(
+    out!(
         "relay {}\n  max TTL: {} h\n  classes: {:?}\n  PoW base difficulty: {} bits",
         relay.onion(),
         info.max_ttl_hours,
         info.classes(),
         info.pow_base_difficulty
-    );
+    )?;
     Ok(())
 }
 
@@ -254,7 +254,7 @@ pub fn drop_put(ctx: &mut Ctx, onion: &str, file: &Path, ttl: u16) -> CmdResult 
     let st = client
         .put(&relay, label, &block, ttl)
         .map_err(|e| Fail::new(exit::RELAY, format!("PUT failed: {e}")))?;
-    eprintln!("PUT → {st:?}");
+    note!("PUT → {st:?}");
     status_result(st)
 }
 
@@ -268,10 +268,10 @@ pub fn drop_get(ctx: &mut Ctx, onion: &str, class: u8, out: Option<&Path>) -> Cm
     let records = client
         .get_all(&relay, class)
         .map_err(|e| Fail::new(exit::RELAY, format!("GET_ALL failed: {e}")))?;
-    println!("{} record(s) in class {class}", records.len());
+    out!("{} record(s) in class {class}", records.len())?;
     if let Some(p) = out {
         files::write_bucket(p, class, &records)?;
-        eprintln!(
+        note!(
             "Bucket written to {} — match it offline with: aska open {}",
             p.display(),
             p.display()
@@ -298,14 +298,14 @@ pub fn post(ctx: &mut Ctx, file: &Path, ttl: u16) -> CmdResult {
     for r in &results {
         match &r.result {
             Ok(st) => {
-                eprintln!("  {}: {st:?}", r.relay.onion());
+                note!("  {}: {st:?}", r.relay.onion());
                 stored |= r.stored();
             }
-            Err(e) => eprintln!("  {}: {e}", r.relay.onion()),
+            Err(e) => note!("  {}: {e}", r.relay.onion()),
         }
     }
     if stored {
-        eprintln!("Posted.");
+        note!("Posted.");
         Ok(())
     } else {
         Err(Fail::new(
@@ -321,50 +321,50 @@ pub fn verify(ctx: &mut Ctx) -> CmdResult {
     use aska_core::fingerprint::{self, Signature};
     ctx.doctor_gate(false)?;
     let fp = fingerprint::check();
-    println!(
+    out!(
         "aska {} — verification (nothing is sent anywhere)",
         env!("CARGO_PKG_VERSION")
-    );
-    println!(
+    )?;
+    out!(
         "  this binary's SHA-256:   {}",
         fp.own_sha256
             .as_deref()
             .unwrap_or("(could not read /proc/self/exe)")
-    );
-    println!(
+    )?;
+    out!(
         "  release:                 {}",
         fp.release_tag
             .as_deref()
             .unwrap_or("(none — this is a development build)")
-    );
-    println!(
+    )?;
+    out!(
         "  release key id:          {}",
         fingerprint::RELEASE_PUBKEY
             .and_then(fingerprint::key_id_of)
             .unwrap_or_else(|| "(no key embedded)".into())
-    );
-    println!(
+    )?;
+    out!(
         "  Rekor transparency entry: {}",
         fp.rekor_entry.as_deref().unwrap_or("(not recorded)")
-    );
+    )?;
     match &fp.signature {
         Signature::NoKey => {
-            println!("  signed hash list:        (not checked — no release key in this build)");
-            println!("  status: unverifiable (development build)");
+            out!("  signed hash list:        (not checked — no release key in this build)")?;
+            out!("  status: unverifiable (development build)")?;
         }
         Signature::NotFound { looked_in } => {
-            println!("  signed hash list:        not found (looked for SHA256SUMS + SHA256SUMS.minisig in:");
+            out!("  signed hash list:        not found (looked for SHA256SUMS + SHA256SUMS.minisig in:")?;
             for d in looked_in {
-                println!("                             {})", d.display());
+                out!("                             {})", d.display())?;
             }
-            println!("  status: unverifiable here — keep the release's SHA256SUMS and SHA256SUMS.minisig next to the binary, or re-run install.sh");
+            out!("  status: unverifiable here — keep the release's SHA256SUMS and SHA256SUMS.minisig next to the binary, or re-run install.sh")?;
         }
         Signature::Invalid { file, reason } => {
-            println!(
+            out!(
                 "  signed hash list:        {} — INVALID ({reason})",
                 file.display()
-            );
-            println!("  status: MISMATCH — do not use this binary for anything real");
+            )?;
+            out!("  status: MISMATCH — do not use this binary for anything real")?;
         }
         Signature::Valid {
             file,
@@ -372,18 +372,18 @@ pub fn verify(ctx: &mut Ctx) -> CmdResult {
             trusted_comment,
             lists_this_binary,
         } => {
-            println!(
+            out!(
                 "  signed hash list:        {} — signature VALID (key {key_id}; \"{trusted_comment}\")",
                 file.display()
-            );
+            )?;
             if *lists_this_binary {
-                println!("  status: MATCH — this binary is in the signed release list");
+                out!("  status: MATCH — this binary is in the signed release list")?;
             } else {
-                println!("  status: MISMATCH — the signed list does not name this binary; do not use it for anything real");
+                out!("  status: MISMATCH — the signed list does not name this binary; do not use it for anything real")?;
             }
         }
     }
-    println!(
+    out!(
         "\nHow to check (Client Design §9.4):\n\
          1. Get the release fingerprint out of band — spoken, on paper, or with a Key Card — BEFORE\n\
             you get the binary.\n\
@@ -391,7 +391,7 @@ pub fn verify(ctx: &mut Ctx) -> CmdResult {
          3. The signed hash list above ties the binary to the release key; the key id and the Rekor\n\
             entry can be compared with the project's published values in a browser of your choosing.\n\
          4. Never install an update because software told you one exists; repeat step 1 instead."
-    );
+    )?;
     Ok(())
 }
 
@@ -412,7 +412,7 @@ pub fn profile_create(ctx: &mut Ctx, file: &Path, auth_key: bool) -> CmdResult {
             .read_hidden("Profile passphrase: ")?
             .ok_or_else(|| Fail::new(exit::ERROR, "no passphrase given"))?;
         if a.trim().is_empty() {
-            eprintln!("A passphrase cannot be empty.");
+            note!("A passphrase cannot be empty.");
             continue;
         }
         if !ctx.input.is_interactive() {
@@ -425,19 +425,19 @@ pub fn profile_create(ctx: &mut Ctx, file: &Path, auth_key: bool) -> CmdResult {
         if a.as_str() == b.as_str() {
             break a;
         }
-        eprintln!("They differ; try again.");
+        note!("They differ; try again.");
     };
     let p = Profile {
         relays: ctx.relays.iter().map(|r| r.pubkey).collect(),
         auth_key: ctx.relays.first().and_then(|r| r.auth_key.clone()),
     };
-    eprintln!("Deriving the profile key (Argon2id, 256 MiB) …");
+    note!("Deriving the profile key (Argon2id, 256 MiB) …");
     let bytes = seal_profile(&p, &pw)?;
     use std::io::Write;
     let mut f = files::create_new(file)?;
     f.write_all(&bytes)?;
     f.sync_all()?;
-    eprintln!(
+    note!(
         "Profile written to {} ({} relays{}). Use it with --profile {}.",
         file.display(),
         p.relays.len(),
@@ -465,18 +465,18 @@ pub fn profile_open(ctx: &mut Ctx, file: &Path) -> CmdResult {
             "profile did not open (wrong passphrase, or not a profile)",
         )
     })?;
-    println!("profile {}", file.display());
+    out!("profile {}", file.display())?;
     for r in p.relays() {
-        println!("  relay {}", r.onion());
+        out!("  relay {}", r.onion())?;
     }
-    println!(
+    out!(
         "  circle auth key: {}",
         if p.auth_key.is_some() {
             "present (not shown)"
         } else {
             "none"
         }
-    );
+    )?;
     Ok(())
 }
 
@@ -492,7 +492,7 @@ pub fn profile_forget(ctx: &mut Ctx, file: &Path) -> CmdResult {
         }
     }
     files::shred(file)?;
-    eprintln!(
+    note!(
         "Forgotten: {} overwritten with random bytes and removed.",
         file.display()
     );

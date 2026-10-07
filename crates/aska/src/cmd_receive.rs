@@ -51,25 +51,25 @@ pub fn collect(ctx: &mut Ctx, s: &mut Session, shares_only: bool) -> CmdResult {
             ));
         }
         if shares_only && !line.trim().to_ascii_lowercase().starts_with("askas1") {
-            eprintln!("Shares only here (askas1…); a Key Card or words go to `aska receive`.");
+            note!("Shares only here (askas1…); a Key Card or words go to `aska receive`.");
             continue;
         }
         match s.add_key_material(&line) {
             Ok(KeyStatus::Ready) => {
-                eprintln!("Key material complete.");
+                note!("Key material complete.");
                 ready = true;
                 if ctx.input.is_interactive() {
                     break;
                 }
             }
             Ok(KeyStatus::NeedShares { have, need }) => {
-                eprintln!("Share accepted — {have} of {need}.");
+                note!("Share accepted — {have} of {need}.");
             }
             Err(SessionError::ForeignShare) => {
-                eprintln!("That Share belongs to a different set; it was not kept.");
+                note!("That Share belongs to a different set; it was not kept.");
             }
             Err(SessionError::BadKeyMaterial) => {
-                eprintln!("Not recognised as a Key Card, 24 words or a Share.");
+                note!("Not recognised as a Key Card, 24 words or a Share.");
             }
             Err(e) => return Err(e.into()),
         }
@@ -84,11 +84,11 @@ fn fetch_with_retries(s: &mut Session, o: &ReceiveOpts) -> Result<bool, Fail> {
     for attempt in 1..=attempts {
         match s.check_drops() {
             Ok(true) => return Ok(true),
-            Ok(false) => eprintln!("Not in the drop (attempt {attempt}/{attempts})."),
+            Ok(false) => note!("Not in the drop (attempt {attempt}/{attempts})."),
             Err(SessionError::NoRelayAnswered(e)) => {
                 unanswered += 1;
                 all_blocked &= crate::ctx::looks_blocked(&e);
-                eprintln!("No relay answered (attempt {attempt}/{attempts}): {e}");
+                note!("No relay answered (attempt {attempt}/{attempts}): {e}");
             }
             Err(SessionError::AuthUnavailable(m)) => {
                 return Err(Fail::new(exit::DOCTOR_REFUSED, m))
@@ -102,7 +102,7 @@ fn fetch_with_retries(s: &mut Session, o: &ReceiveOpts) -> Result<bool, Fail> {
             Err(e) => return Err(e.into()),
         }
         if attempt < attempts {
-            eprintln!(
+            note!(
                 "Waiting {} s before trying again on fresh circuits …",
                 o.interval_secs
             );
@@ -131,12 +131,12 @@ pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, bucket: Option<&Path>) -> CmdResult {
             SessionError::Format(_) => Fail::new(exit::ERROR, "not a valid 24-word receiving seed"),
             e => e.into(),
         })?;
-        eprintln!("Receiving seed accepted.");
+        note!("Receiving seed accepted.");
     } else {
         collect(ctx, &mut s, o.shares_only)?;
     }
     if o.check_only {
-        eprintln!("The Shares reconstruct the key. Nothing was fetched and nothing is shown.");
+        note!("The Shares reconstruct the key. Nothing was fetched and nothing is shown.");
         s.close();
         return Ok(());
     }
@@ -149,7 +149,7 @@ pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, bucket: Option<&Path>) -> CmdResult {
     let found = match bucket {
         Some(p) => {
             let (class, records) = files::read_bucket(p)?;
-            eprintln!(
+            note!(
                 "Matching {} record(s) of class {class} from {} …",
                 records.len(),
                 p.display()
@@ -157,7 +157,7 @@ pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, bucket: Option<&Path>) -> CmdResult {
             s.accept_bucket(records)?
         }
         None => {
-            eprintln!(
+            note!(
                 "Fetching through Tor (whole buckets, matched locally; this can take a minute) …"
             );
             fetch_with_retries(&mut s, o)?
@@ -197,13 +197,13 @@ pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, bucket: Option<&Path>) -> CmdResult {
             Duration::from_secs(o.view_seconds.max(5)),
         )?;
     } else {
-        println!("{}", body.as_str());
+        out!("{}", body.as_str())?;
     }
     let used_seed = s.has_receiving_seed();
     s.close();
-    eprintln!("Closed and burned.");
+    note!("Closed and burned.");
     if used_seed {
-        eprintln!("This receiving key has now been used; create a new one for the next note (aska key receive).");
+        note!("This receiving key has now been used; create a new one for the next note (aska key receive).");
     }
     Ok(())
 }

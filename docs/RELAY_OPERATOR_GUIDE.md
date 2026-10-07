@@ -1,6 +1,6 @@
 # Aska — Relay Operator Guide
 
-## Version 1.0 — for `aska-drop` 1.0.0 (Linux x86-64)
+## Version 1.0.1 — for `aska-drop` 1.0.1 (Linux x86-64)
 
 An Aska **relay** (the "Dead Drop") is the place where sealed notes wait for their receiver. It is a small program that keeps up to a few thousand fixed-size random-looking Blocks in RAM for up to seven days (3,000 with the default capacities), hands all of them to anyone who asks, and forgets them when they expire. It is reachable only as a Tor onion service. It has no accounts, no logs, no admin interface and no disk store; it does not know which Blocks are notes, which are decoys and which are filler, and it cannot tell senders from receivers.
 
@@ -43,9 +43,9 @@ From the release you need two files, and from the source archive three more:
 
 | File | From | Purpose |
 |---|---|---|
-| `aska-drop-1.0.0-linux-x86_64` | release (`https://github.com/secunos/aska/releases`) | the relay binary (static) |
-| `aska-drop-1.0.0-linux-x86_64.minisig` | release | its signature |
-| `deploy/install-debian.sh` | source archive, or `aska-drop-deploy-1.0.0.tar.gz` beside the binary | one-shot installer |
+| `aska-drop-1.0.1-linux-x86_64` | release (`https://github.com/secunos/aska/releases`) | the relay binary (static) |
+| `aska-drop-1.0.1-linux-x86_64.minisig` | release | its signature |
+| `deploy/install-debian.sh` | source archive, or `aska-drop-deploy-1.0.1.tar.gz` beside the binary | one-shot installer |
 | `deploy/torrc.aska-drop` | same | Tor configuration (onion service, no logs, DoS defences) |
 | `deploy/aska-drop.service` | same | hardened systemd unit |
 
@@ -58,8 +58,8 @@ RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox
 On your own computer, in the folder with the files:
 
 ```bash
-sha256sum aska-drop-1.0.0-linux-x86_64                     # compare with the fingerprint
-minisign -V -P RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox -m aska-drop-1.0.0-linux-x86_64
+sha256sum aska-drop-1.0.1-linux-x86_64                     # compare with the fingerprint
+minisign -V -P RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox -m aska-drop-1.0.1-linux-x86_64
 ```
 
 The second command must print `Signature and comment signature verified`. Read `install-debian.sh` before you run it: it is about eighty lines and it reconfigures the firewall, SSH, swap and Tor of the machine it runs on. You should know what it will do.
@@ -73,7 +73,7 @@ The second command must print `Signature and comment signature verified`. Read `
 The installer drops **all** inbound traffic, SSH included, unless you tell it to keep SSH open. Copy everything first and run the install from an SSH session you already have:
 
 ```bash
-scp aska-drop-1.0.0-linux-x86_64 install-debian.sh torrc.aska-drop aska-drop.service root@<server>:/root/
+scp aska-drop-1.0.1-linux-x86_64 install-debian.sh torrc.aska-drop aska-drop.service root@<server>:/root/
 ssh root@<server>
 ```
 
@@ -83,7 +83,7 @@ On the server:
 
 ```bash
 cd /root
-mv aska-drop-1.0.0-linux-x86_64 aska-drop
+mv aska-drop-1.0.1-linux-x86_64 aska-drop
 sha256sum aska-drop                       # the fingerprint again, now on the server
 chmod +x install-debian.sh
 SSH_ALLOW=any ./install-debian.sh         # 5–10 minutes

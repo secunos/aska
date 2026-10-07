@@ -7,6 +7,25 @@
 //! terminal prompt, a camera helper, or `--stdin`.
 #![deny(unsafe_code)]
 
+/// `println!` that reports a failed write instead of panicking: evaluates to `io::Result<()>`,
+/// so call sites use `out!(…)?`. A reader that goes away early (`aska verify | head -1`) turns
+/// into `BrokenPipe`, which `Fail` maps to a quiet exit with code 141 — the command unwinds
+/// normally, so the `Session` and every buffer are still wiped on the way out.
+macro_rules! out {
+    ($($arg:tt)*) => {{
+        use std::io::Write as _;
+        writeln!(std::io::stdout().lock(), $($arg)*)
+    }};
+}
+
+/// `eprintln!` that never panics: diagnostics on a closed or full stderr are dropped.
+macro_rules! note {
+    ($($arg:tt)*) => {{
+        use std::io::Write as _;
+        let _ = writeln!(std::io::stderr().lock(), $($arg)*);
+    }};
+}
+
 mod cmd_misc;
 mod cmd_receive;
 mod cmd_send;
@@ -29,7 +48,7 @@ environment checks of `aska doctor` and shows their warnings.
 
 Exit codes: 0 success · 2 success after acknowledged warnings · 3 you declined ·
 4 relay unreachable or full · 5 nothing found or opened · 6 refused (not through Tor, or a
-relay that is not a .onion) · 1 other error.
+relay that is not a .onion) · 141 standard output closed early (e.g. `| head`) · 1 other error.
 
 If the local network blocks Tor, Aska cannot work around it by itself (it uses the system Tor
 and writes no configuration): the doctor says so when it can tell, and every failed network
@@ -354,10 +373,10 @@ fn doctor_only(ctx: &mut Ctx) -> Result<(), Fail> {
             }
             Severity::Info => "INFO",
         };
-        println!("[{tag}] {}{}", f.message, crate::ctx::cli_hint_for(f));
+        out!("[{tag}] {}{}", f.message, crate::ctx::cli_hint_for(f))?;
     }
     if findings.is_empty() {
-        println!("No findings.");
+        out!("No findings.")?;
     }
     if worst == exit::OK {
         Ok(())
@@ -435,7 +454,7 @@ fn main() -> ExitCode {
         Ok(code) => ExitCode::from(code as u8),
         Err(Fail(code, msg)) => {
             if !msg.is_empty() {
-                eprintln!("aska: {msg}");
+                note!("aska: {msg}");
             }
             ExitCode::from(code as u8)
         }

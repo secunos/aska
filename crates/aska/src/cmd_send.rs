@@ -43,7 +43,7 @@ fn read_confirmed(ctx: &mut Ctx, what: &str) -> Result<Zeroizing<String>, Fail> 
     loop {
         let a = need(ctx.input.read_hidden(&format!("{what}: "))?, what)?;
         if a.is_empty() {
-            eprintln!("A passphrase cannot be empty.");
+            note!("A passphrase cannot be empty.");
             continue;
         }
         if !ctx.input.is_interactive() {
@@ -53,7 +53,7 @@ fn read_confirmed(ctx: &mut Ctx, what: &str) -> Result<Zeroizing<String>, Fail> 
         if a.as_str() == b.as_str() {
             return Ok(a);
         }
-        eprintln!("They differ; try again.");
+        note!("They differ; try again.");
     }
 }
 
@@ -123,12 +123,12 @@ fn post_with_retries(s: &mut Session, attempts: u32) -> CmdResult {
             let short = &onion[..onion.len().min(12)];
             match &r.result {
                 Ok(st) => {
-                    eprintln!("  {short}…: {st:?}");
+                    note!("  {short}…: {st:?}");
                     stored |= r.stored();
                     all_blocked = false;
                 }
                 Err(e) => {
-                    eprintln!("  {short}…: {e}");
+                    note!("  {short}…: {e}");
                     all_blocked &= crate::ctx::looks_blocked(e);
                 }
             }
@@ -137,7 +137,7 @@ fn post_with_retries(s: &mut Session, attempts: u32) -> CmdResult {
             return Ok(());
         }
         if attempt < attempts {
-            eprintln!(
+            note!(
                 "Not stored yet — retrying on fresh circuits ({}/{attempts}) …",
                 attempt + 1
             );
@@ -200,13 +200,13 @@ pub fn run(ctx: &mut Ctx, o: &SendOpts, seal_out: Option<&Path>) -> CmdResult {
         SessionError::TooLarge => too_large(0),
         e => e.into(),
     })?;
-    eprintln!("Sealed.");
+    note!("Sealed.");
 
     match seal_out {
         Some(out) => {
             let (label, block) = s.sealed_block()?;
             files::write_block(out, &label, block)?;
-            eprintln!(
+            note!(
                 "Block written to {} ({} bytes). It is safe to move; post it from a networked machine with:\n  aska post {} --relay <onion>",
                 out.display(),
                 block.len(),
@@ -214,11 +214,9 @@ pub fn run(ctx: &mut Ctx, o: &SendOpts, seal_out: Option<&Path>) -> CmdResult {
             );
         }
         None => {
-            eprintln!(
-                "Posting through Tor (a fresh circuit per request; this can take a minute) …"
-            );
+            note!("Posting through Tor (a fresh circuit per request; this can take a minute) …");
             post_with_retries(&mut s, o.attempts)?;
-            eprintln!("Posted.");
+            note!("Posted.");
         }
     }
 
@@ -226,20 +224,20 @@ pub fn run(ctx: &mut Ctx, o: &SendOpts, seal_out: Option<&Path>) -> CmdResult {
         // KEY-10: nothing to hand over; the receiver's seed opens it.
         let check = s.recipient_check().unwrap_or_default();
         if ctx.input.is_interactive() {
-            eprintln!(
+            note!(
                 "Sealed for the Receiving Key with check {check}. Nothing to hand over — the receiver opens it with their seed.\n\
                  Confirm the check with them over another channel if you have not already."
             );
         } else {
-            println!("POSTED {check}");
+            out!("POSTED {check}")?;
         }
         s.close();
-        eprintln!("Done.");
+        note!("Done.");
         return Ok(());
     }
     handover::hand_over(ctx, &mut s, level, &o.for_labels, o.out_keycard.as_deref())?;
     s.close();
-    eprintln!("Done — the key has been forgotten.");
+    note!("Done — the key has been forgotten.");
     Ok(())
 }
 

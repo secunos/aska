@@ -30,6 +30,9 @@ pub mod exit {
     pub const NOTHING: i32 = 5;
     /// The doctor refused: not through Tor, or a relay that is not a `.onion`.
     pub const DOCTOR_REFUSED: i32 = 6;
+    /// Standard output was closed before the command finished (`aska verify | head -1`): stop
+    /// quietly with the status a shell reports for a command ended by SIGPIPE (128 + 13).
+    pub const PIPE: i32 = 141;
 }
 
 /// A command's failure, carrying the exit code and a line for stderr.
@@ -43,6 +46,9 @@ impl Fail {
 
 impl From<io::Error> for Fail {
     fn from(e: io::Error) -> Self {
+        if e.kind() == io::ErrorKind::BrokenPipe {
+            return Fail(exit::PIPE, String::new());
+        }
         Fail(exit::ERROR, e.to_string())
     }
 }
@@ -260,7 +266,7 @@ impl Ctx {
             if f.check == Check::MemoryLock {
                 memlock = true;
             }
-            eprintln!("[{tag}] {}{}", f.message, cli_hint_for(f));
+            note!("[{tag}] {}{}", f.message, cli_hint_for(f));
         }
         if network && doctor::refuses(&findings) {
             return Err(Fail::new(
@@ -329,7 +335,7 @@ impl Ctx {
 
     /// Run the camera helper and return the first line it prints (the decoded QR text).
     pub fn scan(&mut self) -> Result<Zeroizing<String>, Fail> {
-        eprintln!(
+        note!(
             "Starting the camera helper ({}) — show the QR code to the camera …",
             self.scan_cmd
         );
@@ -400,7 +406,7 @@ pub fn cli_hint_for(f: &aska_core::doctor::Finding) -> &'static str {
 
 /// The D-16 guidance line, printed once when every network attempt failed that way.
 pub fn print_blocked_hint() {
-    eprintln!(
+    note!(
         "Every attempt failed the way a blocked network fails (Tor answered, nothing beyond it did). {}{}",
         aska_core::tor::blocked_network_guidance(),
         aska_core::tor::blocked_network_cli_hint()

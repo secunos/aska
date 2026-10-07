@@ -173,6 +173,31 @@ impl Bench {
 
     /// As `aska_in`, with extra environment variables (doctor trigger tests).
     pub fn aska_env(&self, cwd: &Path, args: &[&str], stdin: &str, env: &[(&str, &str)]) -> Out {
+        self.run(cwd, args, stdin, env, Stdio::piped())
+    }
+
+    /// As `aska`, with standard output connected to a pipe whose reading end is already
+    /// closed — every write to stdout fails with `EPIPE`, deterministically (`aska … | head`
+    /// after `head` has gone). `Out::stdout` is then always empty.
+    pub fn aska_closed_stdout(&self, args: &[&str], stdin: &str) -> Out {
+        use std::os::fd::{FromRawFd, OwnedFd};
+        let mut fds = [0 as libc::c_int; 2];
+        // SAFETY: `pipe` fills both descriptors on success; each is owned exactly once below.
+        assert_eq!(unsafe { libc::pipe(fds.as_mut_ptr()) }, 0, "pipe()");
+        let (reader, writer) =
+            unsafe { (OwnedFd::from_raw_fd(fds[0]), OwnedFd::from_raw_fd(fds[1])) };
+        drop(reader);
+        self.run(&self.dir, args, stdin, &[], Stdio::from(writer))
+    }
+
+    fn run(
+        &self,
+        cwd: &Path,
+        args: &[&str],
+        stdin: &str,
+        env: &[(&str, &str)],
+        stdout: Stdio,
+    ) -> Out {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_aska"));
         cmd.current_dir(cwd)
             .env_clear()
@@ -195,9 +220,12 @@ impl Bench {
             ])
             .args(args)
             .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
+            .stdout(stdout)
             .stderr(Stdio::piped());
         let mut child = cmd.spawn().unwrap();
+        // Drop the parent's copies of the stdout pipe (in `aska_closed_stdout`) so the child
+        // holds the only writer.
+        drop(cmd);
         {
             let mut si = child.stdin.take().unwrap();
             // A command that refuses before reading stdin (doctor refusals) may have exited

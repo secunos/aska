@@ -314,6 +314,28 @@ fn refusals_and_exit_codes() {
 
 use std::process::Command;
 
+/// 1.0.0 aborted (exit 134, "failed printing to stdout: Broken pipe") when its reader went
+/// away early, e.g. `aska verify | head -1`. Now: a quiet exit with 141, the status a shell
+/// reports for a command ended by SIGPIPE — including in the middle of a hand-over.
+#[test]
+fn closed_stdout_exits_141_quietly() {
+    let b = Bench::new("pipe");
+    let cases: [(&[&str], &str); 3] = [
+        (&["verify"], ""),
+        (&["doctor"], ""),
+        (&["--relay", ONION, "send"], "x\n"),
+    ];
+    for (args, stdin) in cases {
+        let o = b.aska_closed_stdout(args, stdin);
+        assert_eq!(o.code, 141, "{args:?}: {}", o.dump());
+        assert!(
+            !o.stderr.contains("panicked") && !o.stderr.contains("Broken pipe"),
+            "{args:?} must stop quietly: {}",
+            o.dump()
+        );
+    }
+}
+
 #[test]
 fn profile_create_open_use_and_forget() {
     let b = Bench::new("profile");

@@ -10,7 +10,7 @@ test vectors are in `reference/`.
 - **[User Guide](docs/USER_GUIDE.md)** — requirements, how to check that your copy is real, install, send and receive, the receiving-key path, Tails and Qubes, and what Aska does **not** protect you against. Shipped inside every release tarball as `docs/USER_GUIDE.md`.
 - **[Relay Operator Guide](docs/RELAY_OPERATOR_GUIDE.md)** — what a relay is, requirements, install from the signed binary, configuration, upgrade, what running one means. Shipped as `aska-drop-deploy-<version>.tar.gz` beside the relay binary.
 - **Releases** (`https://github.com/secunos/aska/releases`) are signed with minisign key `79AD6224AFF176C9` (`release/aska-release.pub`); each release directory carries `SHA256SUMS.txt`, its signature and `RELEASE-NOTES.txt`. Get the fingerprint out of band first, then the files — the User Guide, section 3, says how.
-- **Release status:** 1.0.0 has passed the project's own gates and an internal security pre-review (`docs/Aska_Internal_PreReview_Report_v0.1.md`); it has **not** had an independent security audit or a legal review. The Security Review Package and Legal Review Brief in `docs/` are published so that anyone can conduct one.
+- **Release status:** 1.0.1 (a command-line fix on top of 1.0.0) has passed the project's own gates and an internal security pre-review (`docs/Aska_Internal_PreReview_Report_v0.1.md`); it has **not** had an independent security audit or a legal review. The Security Review Package and Legal Review Brief in `docs/` are published so that anyone can conduct one.
 
 Licences: `LICENSE.md`. Reporting a security problem: `SECURITY.md`. The rest of this file is for developers.
 
@@ -23,7 +23,7 @@ draft-11 vector reproduced) with the X25519 half written as an Elligator2 repres
 KEM Block looks like any other. CLI and GUI both do it; all gates pass, plus new ones for
 uniformity, matching timing and receiving-key memory. **M6 first runs done (Ubuntu stand-in
 for Debian; Tails and Qubes checklists still open → release gate), three packaging fixes. M7
-release engineering done: signed releases (`docs/RELEASING.md`), `v0.1.0-alpha` owner-signed. M8: Security Review Package, Legal Review Brief and Release Checklist issued; internal pre-review done (2 High, 11 Medium fixed; `docs/Aska_Internal_PreReview_Report_v0.1.md`), Block Format draft 0.5 (`docs/Aska_Security_Review_Package_v0.1.md`, `docs/Aska_Legal_Review_Brief_v0.1.md`, `docs/Aska_Release_Checklist_v0.2.md`). **Aska 1.0.0 released 6 Oct 2026** — signed, verified independently, smoke-tested on Debian 13 (`docs/releases/v1.0.0.md`); external security and legal reviews not done (see `SECURITY.md`).**
+release engineering done: signed releases (`docs/RELEASING.md`), `v0.1.0-alpha` owner-signed. M8: Security Review Package, Legal Review Brief and Release Checklist issued; internal pre-review done (2 High, 11 Medium fixed; `docs/Aska_Internal_PreReview_Report_v0.1.md`), Block Format draft 0.5 (`docs/Aska_Security_Review_Package_v0.1.md`, `docs/Aska_Legal_Review_Brief_v0.1.md`, `docs/Aska_Release_Checklist_v0.2.md`). **Aska 1.0.0 released 6 Oct 2026** — signed, verified independently, smoke-tested on Debian 13 (`docs/releases/v1.0.0.md`); external security and legal reviews not done (see `SECURITY.md`).** **Aska 1.0.1:** the command-line client stops quietly with status 141 instead of aborting when its output is closed early (`aska verify | head -1`); nothing else changed (`docs/releases/v1.0.1.md`).
 Plan: `docs/Aska_Prototype_Plan_v0.1.md`.
 
 ## Workspace
