@@ -79,6 +79,23 @@ pub fn run(cfg: &DoctorConfig) -> Vec<Finding> {
             message: "X11 session: screenshots cannot be prevented. Prefer a Wayland session."
                 .into(),
         });
+    } else if platform::session_type().as_deref() == Some("wayland") {
+        // No Wayland protocol lets a window exclude itself from capture; KDE Plasma 6.6+
+        // offers it as a user action, which is the most Aska can point at (1.1 step 4).
+        let v = platform::plasma_version();
+        if platform::plasma_can_hide_window(v) {
+            f.push(Finding {
+                check: Check::ScreenCapture,
+                severity: Severity::Info,
+                message: "Plasma can hide this window from screenshots and recordings: title bar → More Actions → \"Hide from Screencast\" (a window rule makes it permanent). Aska cannot turn it on itself.".into(),
+            });
+        } else if v.is_some() {
+            f.push(Finding {
+                check: Check::ScreenCapture,
+                severity: Severity::Info,
+                message: "Plasma before 6.6 cannot hide a window from screen capture; capture can be detected, not blocked.".into(),
+            });
+        }
     }
     // Process probes compare the exact `comm` (the kernel truncates it to 15 bytes), so
     // "obsidian" does not trip the "obs" check. The PipeWire ScreenCast-portal and AT-SPI

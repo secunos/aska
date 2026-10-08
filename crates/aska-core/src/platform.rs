@@ -107,6 +107,36 @@ pub fn session_type() -> Option<String> {
 }
 
 /// Whether swap is active: any entry in `/proc/swaps` or a zram block device.
+/// KDE Plasma's version `(major, minor)` when this is a Plasma session, from
+/// `plasmashell --version` ("plasmashell 6.6.2"). `None` outside Plasma or when the version
+/// cannot be read. Plasma 6.6 added a per-window "Hide from Screencast" action (6.7 renamed it
+/// "Hide from Screenshots and Screen Recordings"); it is a user action in the window menu or
+/// a window rule — no Wayland protocol lets an application request it for itself, so Aska
+/// can only tell the user where it is (Client Design §6.2, 1.1 step 4).
+pub fn plasma_version() -> Option<(u32, u32)> {
+    let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
+    if !desktop.split(':').any(|d| d.eq_ignore_ascii_case("KDE")) {
+        return None;
+    }
+    let out = std::process::Command::new("plasmashell")
+        .arg("--version")
+        .stdin(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .output()
+        .ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let ver = text.split_whitespace().last()?;
+    let mut parts = ver.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next()?.parse().ok()?;
+    Some((major, minor))
+}
+
+/// True when Plasma offers the per-window "hide from capture" action (6.6 and later).
+pub fn plasma_can_hide_window(v: Option<(u32, u32)>) -> bool {
+    matches!(v, Some((major, minor)) if major > 6 || (major == 6 && minor >= 6))
+}
+
 pub fn swap_active() -> bool {
     let swaps = std::fs::read_to_string("/proc/swaps").unwrap_or_default();
     if swaps.lines().skip(1).any(|l| !l.trim().is_empty()) {

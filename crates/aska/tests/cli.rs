@@ -883,6 +883,64 @@ fn doctor_findings_fire_on_their_triggers_and_stay_silent_otherwise() {
         "{}",
         a11y_off.dump()
     );
+    // KDE Plasma on Wayland (1.1 step 4): 6.6+ gets the pointer to the per-window "Hide from
+    // Screencast" action; older Plasma the "cannot hide" note; other desktops nothing.
+    // `plasmashell --version` is answered by a stub on PATH.
+    let stubs = b.path("stubs");
+    std::fs::create_dir_all(&stubs).unwrap();
+    let stub = |version: &str| {
+        let path = stubs.join("plasmashell");
+        std::fs::write(&path, format!("#!/bin/sh\necho 'plasmashell {version}'\n")).unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    };
+    let path_with_stubs = format!(
+        "{}:{}",
+        stubs.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+    stub("6.6.2");
+    let plasma = b.aska_env(
+        &b.dir,
+        &["doctor"],
+        "",
+        &[
+            ("XDG_SESSION_TYPE", "wayland"),
+            ("XDG_CURRENT_DESKTOP", "KDE"),
+            ("PATH", &path_with_stubs),
+        ],
+    );
+    assert!(
+        plasma.stdout.contains("[INFO] Plasma can hide this window"),
+        "{}",
+        plasma.dump()
+    );
+    assert!(
+        plasma.ok(),
+        "an INFO finding does not change the exit code: {}",
+        plasma.dump()
+    );
+    stub("6.3.5");
+    let old_plasma = b.aska_env(
+        &b.dir,
+        &["doctor"],
+        "",
+        &[
+            ("XDG_SESSION_TYPE", "wayland"),
+            ("XDG_CURRENT_DESKTOP", "KDE"),
+            ("PATH", &path_with_stubs),
+        ],
+    );
+    assert!(
+        old_plasma.stdout.contains("[INFO] Plasma before 6.6"),
+        "{}",
+        old_plasma.dump()
+    );
+    let gnome = run(&[
+        ("XDG_SESSION_TYPE", "wayland"),
+        ("XDG_CURRENT_DESKTOP", "GNOME"),
+    ]);
+    assert!(!gnome.stdout.contains("Plasma"), "{}", gnome.dump());
     // Tor reachable through the bench's SOCKS: no Tor finding; a dead port: refusal.
     assert!(!clean.stdout.contains("Tor"), "{}", clean.dump());
     let dead = Command::new(env!("CARGO_BIN_EXE_aska"))

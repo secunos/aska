@@ -157,6 +157,7 @@ view.burned = Closed and burned.
 view.footer.rules = No copy, save, forward, print or share. This screen is the only place the note exists.
 view.capture.x11 = Screenshots cannot be prevented on X11.
 view.capture.wayland = Screen capture can be detected but not blocked on this system.
+view.capture.plasma = Screen capture can be detected but not blocked by Aska — Plasma can hide this window: title bar → More Actions → "Hide from Screencast".
 view.capture.unknown = Screen-capture protection on this system is unknown.
 
 shares.title = Shares

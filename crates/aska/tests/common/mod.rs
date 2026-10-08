@@ -201,8 +201,9 @@ impl Bench {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_aska"));
         cmd.current_dir(cwd)
             .env_clear()
-            .envs(env.iter().copied())
             .env("PATH", std::env::var("PATH").unwrap_or_default())
+            // Test-specific variables last, so a test may override PATH (stub programs).
+            .envs(env.iter().copied())
             .env("HOME", &self.dir)
             .env("XDG_CONFIG_HOME", self.dir.join("xdg-config"))
             .env("XDG_DATA_HOME", self.dir.join("xdg-data"))

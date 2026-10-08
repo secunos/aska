@@ -156,6 +156,7 @@ view.burned = Stängt och bränt.
 view.footer.rules = Ingen kopiering, sparning, vidarebefordran, utskrift eller delning. Den här skärmen är det enda stället meddelandet finns.
 view.capture.x11 = Skärmdumpar kan inte förhindras under X11.
 view.capture.wayland = Skärminspelning kan upptäckas men inte blockeras på det här systemet.
+view.capture.plasma = Skärminspelning kan upptäckas men inte blockeras av Aska — Plasma kan dölja fönstret: titelraden → Fler åtgärder → ”Hide from Screencast”.
 view.capture.unknown = Skyddet mot skärmdumpar på det här systemet är okänt.
 
 shares.title = Andelar

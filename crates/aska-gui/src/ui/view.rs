@@ -145,8 +145,15 @@ pub fn build(ui: &Rc<Ui>, info: OpenInfo, seed_used: bool) -> adw::NavigationPag
 fn capture_line() -> String {
     match aska_core::platform::session_type().as_deref() {
         Some("x11") => tr("view.capture.x11"),
-        // KDE's per-window capture flag (§6.2) is not requested yet — saying "blocked" would
-        // not be true, so Wayland gets the detect-only line everywhere (residual, M6).
+        // No Wayland protocol lets a window exclude itself from capture (§6.2; 1.1 step 4
+        // established this). Plasma 6.6+ has the user action; everywhere else: detect only.
+        Some("wayland")
+            if aska_core::platform::plasma_can_hide_window(
+                aska_core::platform::plasma_version(),
+            ) =>
+        {
+            tr("view.capture.plasma")
+        }
         Some("wayland") => tr("view.capture.wayland"),
         _ => tr("view.capture.unknown"),
     }

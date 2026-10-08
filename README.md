@@ -11,7 +11,7 @@ test vectors are in `reference/`.
 - **[Relay Operator Guide](docs/RELAY_OPERATOR_GUIDE.md)** — what a relay is, requirements, install from the signed binary, configuration, upgrade, what running one means. Shipped as `aska-drop-deploy-<version>.tar.gz` beside the relay binary.
 - **Releases** (`https://github.com/secunos/aska/releases`) are signed with minisign key `79AD6224AFF176C9` (`release/aska-release.pub`); each release directory carries `SHA256SUMS.txt`, its signature and `RELEASE-NOTES.txt`. Get the fingerprint out of band first, then the files — the User Guide, section 3, says how.
 - **Specifications** (re-issued 7 Oct 2026 to match release 1.0.1): `docs/Secure_Notes_Sharing_App_Aska_Decision_Record_and_Threat_Model_v0.4.md`, `docs/Aska_Client_Design_v0.6.md`, `docs/Aska_Block_Format_Specification_v1_draft0.6.md`, `docs/Aska_Dead_Drop_Protocol_Specification_ADP1_draft0.3.md`. Earlier versions stay in `docs/` because older documents refer to them.
-- **Work in progress:** release 1.1 (`docs/Aska_1.1_Plan_v0.2.md`); `main` carries the 1.1 development version. The released software is 1.0.1.
+- **Work in progress:** release 1.1 (`docs/Aska_1.1_Plan_v0.3.md`); `main` carries the 1.1 development version. The released software is 1.0.1.
 - **Release status:** 1.0.1 (a command-line fix on top of 1.0.0) has passed the project's own gates and an internal security pre-review (`docs/Aska_Internal_PreReview_Report_v0.1.md`); it has **not** had an independent security audit or a legal review. The Security Review Package and Legal Review Brief in `docs/` are published so that anyone can conduct one.
 
 Licences: `LICENSE.md`. Reporting a security problem: `SECURITY.md`. The rest of this file is for developers.
