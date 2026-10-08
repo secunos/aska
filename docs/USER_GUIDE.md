@@ -1,6 +1,6 @@
 # Aska — User Guide
 
-## Version 1.0.1 — for Aska 1.0.1 (Linux x86-64)
+## Version 1.1 — for Aska 1.1.0 (Linux x86-64)
 
 Aska sends a short note to one person, or to a small group, in a way that leaves nothing behind. The note is encrypted on your computer, parked as unreadable noise on a relay that is reachable only through Tor, fetched by the receiver, shown on their screen, and gone. Aska keeps no history, no contacts, no account, no log, and writes nothing to disk unless you ask it to.
 
@@ -14,7 +14,7 @@ This guide tells you what you need, how to check that the copy you have is the r
 
 **What Aska cannot do.** It cannot protect a note from the person you send it to, from a camera pointed at the screen, or from a computer that is already compromised by someone else. It cannot stop you from saving a key to a file or reading the words over a channel that is being listened to. It cannot make Tor work on a network that blocks Tor. These limits are spelled out in section 9; the short version is that Aska protects the *message* and the *trail* — the two ends are yours to protect.
 
-**The status of this release.** Aska 1.0.1 has been through the project's own internal security review (its report is published with the source) and the gates listed in the release record. It has **not** been reviewed by an independent security auditor, and it has not had a legal review in any jurisdiction. The owner of the project chose to release it on that basis. If your safety depends on this software, weigh that fact.
+**The status of this release.** Aska 1.1.0 (1.0 plus the 1.1 features: stored receiving keys, in-app camera, a note viewer that keeps the note out of the toolkit, and hardening) has been through the project's own internal security review (its report is published with the source) and the gates listed in the release record. It has **not** been reviewed by an independent security auditor, and it has not had a legal review in any jurisdiction. The owner of the project chose to release it on that basis. If your safety depends on this software, weigh that fact.
 
 ---
 
@@ -40,7 +40,7 @@ A tool like this is only worth having if the copy you run is the copy the projec
 
 ## 3.1 Get the fingerprint first, then the files
 
-For a user the release is one tarball, `aska-gui-1.0.1-linux-x86_64.tar.gz`, and three small companion files: `aska-gui-1.0.1-linux-x86_64.tar.gz.minisig` (its signature), `SHA256SUMS.txt` and `SHA256SUMS.txt.minisig`. The release page also carries the public key file, `RELEASE-NOTES.txt`, and — for relay operators — the relay binary `aska-drop-1.0.1-linux-x86_64`, the deploy tarball `aska-drop-deploy-1.0.1.tar.gz` and their signatures.
+For a user the release is one tarball, `aska-gui-1.1.0-linux-x86_64.tar.gz`, and three small companion files: `aska-gui-1.1.0-linux-x86_64.tar.gz.minisig` (its signature), `SHA256SUMS.txt` and `SHA256SUMS.txt.minisig`. The release page also carries the public key file, `RELEASE-NOTES.txt`, and — for relay operators — the relay binary `aska-drop-1.1.0-linux-x86_64`, the deploy tarball `aska-drop-deploy-1.1.0.tar.gz` and their signatures.
 
 Before you download anything, obtain the release **fingerprint** — the SHA-256 of the tarball, 64 hexadecimal characters — from a source you trust that is **not** the download site: the person who introduced you to Aska, on paper, read over a call, or exchanged in person. The project also publishes its signing key id, `79AD6224AFF176C9`, and the public key
 
@@ -57,7 +57,7 @@ Then download the four files from the project's release page, `https://github.co
 In a terminal, in the folder with the downloaded files:
 
 ```bash
-sha256sum aska-gui-1.0.1-linux-x86_64.tar.gz
+sha256sum aska-gui-1.1.0-linux-x86_64.tar.gz
 ```
 
 The 64-character value must be **identical** to the fingerprint you obtained out of band. If it is not, stop: delete the file and ask your source again. Do not "try it anyway".
@@ -65,7 +65,7 @@ The 64-character value must be **identical** to the fingerprint you obtained out
 If you have `minisign` installed (`sudo apt install minisign`), also check the signature with the public key from above:
 
 ```bash
-minisign -V -P RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox -m aska-gui-1.0.1-linux-x86_64.tar.gz
+minisign -V -P RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox -m aska-gui-1.1.0-linux-x86_64.tar.gz
 ```
 
 It must say `Signature and comment signature verified`. The comment names the release tag.
@@ -73,15 +73,15 @@ It must say `Signature and comment signature verified`. The comment names the re
 ## 3.3 Unpack and install
 
 ```bash
-tar -xzf aska-gui-1.0.1-linux-x86_64.tar.gz
-cd aska-gui-1.0.1-linux-x86_64
+tar -xzf aska-gui-1.1.0-linux-x86_64.tar.gz
+cd aska-gui-1.1.0-linux-x86_64
 sha256sum -c SHA256SUMS            # both lines: OK
 ./install.sh
 ```
 
 `install.sh` copies `aska` and `aska-gui` to `~/.local/bin`, a desktop entry and icon to `~/.local/share`, and the signed hash list to `~/.local/share/aska` so the application can verify itself later, and refreshes your desktop's application cache (`mimeinfo.cache`). It writes nothing else and never asks for a password. To uninstall, delete those files.
 
-**On Tails, do not run `install.sh`.** Unpack into `~/aska` (which is in RAM) and run `~/aska/aska-gui-1.0.1-linux-x86_64/bin/aska-gui` from there; everything disappears at shutdown, which is the point of Tails. The USB stick that carries the tarball to Tails must be formatted **FAT32** — Tails does not mount exFAT, the default for large sticks on Windows.
+**On Tails, do not run `install.sh`.** Unpack into `~/aska` (which is in RAM) and run `~/aska/aska-gui-1.1.0-linux-x86_64/bin/aska-gui` from there; everything disappears at shutdown, which is the point of Tails. The USB stick that carries the tarball to Tails must be formatted **FAT32** — Tails does not mount exFAT, the default for large sticks on Windows.
 
 ## 3.4 First start
 
@@ -186,7 +186,7 @@ Press **Check the drop**. Aska fetches the relay's whole stock of Blocks of the 
 
 ## 6.1 Reading and burning
 
-The note is shown in a read-only field drawn straight from locked memory; it cannot be selected, copied or searched. A countdown runs (five minutes by default, adjustable in Settings → Timers). Press **Close and burn** when you have read it. Aska wipes the note and the key; closing the window or letting the countdown finish does the same. The footer tells you the truth about screenshots on this system: on X11 they cannot be prevented; on Wayland capture can be detected but not blocked.
+The note is shown by Aska's own viewer, drawn word by word straight from locked memory — it never passes through a text box of the toolkit, cannot be selected, copied or searched, and is invisible to accessibility tools. A countdown runs (five minutes by default, adjustable in Settings → Timers). Press **Close and burn** when you have read it. Aska wipes the note and the key; closing the window or letting the countdown finish does the same. The footer tells you the truth about screenshots on this system: on X11 they cannot be prevented; on Wayland capture can be detected but not blocked by Aska. KDE Plasma 6.6 and later can hide a window from screenshots and recordings as a **user** action — right-click the title bar → More Actions → *Hide from Screencast* (6.7: *Hide from Screenshots and Screen Recordings*; a window rule makes it permanent) — and Aska points this out there; no application can turn it on for itself.
 
 A note you need to keep is a note you must write down by hand, knowing that the paper is now the weakest point.
 
@@ -212,6 +212,15 @@ The Quick and Guarded levels need a hand-over: the receiver must get a key from 
 
 When you press **Close and burn** (or the countdown ends) Aska reminds you that this key has now been used and that a new one should be created. Anyone who later learns the 24 words can read every note sent to that key that is still on the relay. Aska will not stop you from reusing a key; the advice stands.
 
+## 7.1 Keeping a receiving key in the profile (1.1)
+
+If you keep a receiving key for longer than one note — a contact address that several people write to — you can store its seed in the encrypted profile (section 8) instead of typing the 24 words each time. With a profile open:
+
+- **Receiving key** → after **Create** (or after deriving from existing words) press **Store in profile** and enter the profile passphrase. The page lists *Keys stored in the profile* by their twelve-character check; selecting one shows its public key and QR again, and **Remove from profile** deletes it.
+- **Receive** → **I have a receiving seed** → choose the key in **Use a stored key** instead of typing the words → **Add** → **Check the drop**.
+
+A profile holds up to eight seeds. The file stays one 4 KiB block of random-looking bytes, rewritten in place; nothing about which keys it holds is visible without the passphrase. Keep the 24 words on paper as well: a lost or forgotten profile loses the key with it. A profile written by Aska 1.0 opens unchanged; a 1.1 profile opens in 1.0 without its stored keys.
+
 ---
 
 # 8. Settings, profile and cover traffic
@@ -232,7 +241,7 @@ The gear opens **Settings**.
 
 **Verify this app** — section 3.4.
 
-**Encrypted profile** — the one thing Aska can write to disk, and only at a path you type: your circle's relays (and circle key, if any) in a file of random-looking bytes protected by a passphrase. With a profile open you need not type the relay each time. *Create…*, *Open…* and *Forget…* (which overwrites the file with random bytes and deletes it). Nothing else — no notes, no keys, no history — is ever in it. Opening a profile takes a few seconds (Argon2id, 256 MiB).
+**Encrypted profile** — the one thing Aska can write to disk, and only at a path you type: your circle's relays (and circle key, if any) in a file of random-looking bytes protected by a passphrase. With a profile open you need not type the relay each time; since 1.1 it can also hold your receiving-key seeds (section 7.1). *Create…*, *Open…* and *Forget…* (which overwrites the file with random bytes and deletes it). Nothing else — no notes, no hand-over keys, no history — is ever in it. Opening a profile takes a few seconds (Argon2id, 256 MiB).
 
 ---
 
@@ -288,15 +297,17 @@ aska receive                                   # paste the Key Card (or words, o
 aska --relay <onion> share combine             # a Share holder: paste Shares until the key is whole
 aska --relay <onion> key receive               # new receiving key: 24 words, askar1… key, check
 aska --relay <onion> send --to askar1…         # send to a receiving key
-aska --relay <onion> receive --receiving-seed  # receive with the 24 words
+aska --relay <onion> receive --receiving-seed  # receive with the 24 words (or a stored key's check)
+aska profile add-seed --file ~/circle.aska --new   # 1.1: store a new receiving key in the profile
+aska --profile ~/circle.aska key receive --stored  # its public key again (several stored: name the check)
 aska verify                                    # own hash, release key, signed list check (offline)
 aska --relay <onion> profile create --file ~/circle.aska   # the optional encrypted profile (needs ≥ 1 relay)
 aska --profile ~/circle.aska send              # use it
 ```
 
-Global options: `--relay` (repeatable), `--profile FILE`, `--socks HOST:PORT` (default 127.0.0.1:9050) or `--tor-browser` (127.0.0.1:9150), `-y`/`--yes` to acknowledge warnings (a success then exits 2), `--accept-unlocked-memory`, `--qr half|ascii|none`, `--idle SECONDS`, `--scan-cmd CMD`. `aska --help` and `aska <command> --help` are the full reference.
+Global options: `--relay` (repeatable), `--profile FILE`, `--socks HOST:PORT` (default 127.0.0.1:9050) or `--tor-browser` (127.0.0.1:9150), `-y`/`--yes` to acknowledge warnings (a success then exits 2), `--accept-unlocked-memory`, `--qr half|ascii|none`, `--idle SECONDS`, `--scan-cmd CMD` (the helper used when no camera can be read in-process) and `--scan-helper` (always use the helper). Typing `scan` at a key-material prompt reads the camera in-process (1.1). `aska --help` and `aska <command> --help` are the full reference.
 
-Exit codes: 0 success · 2 success after acknowledged warnings · 3 you declined · 4 relay unreachable or full · 5 nothing found or opened · 6 refused (not through Tor, or a relay that is not a `.onion`) · 141 output closed early, e.g. by `| head` (1.0.1 and later) · 1 other error.
+Exit codes: 0 success · 2 success after acknowledged warnings · 3 you declined · 4 relay unreachable or full · 5 nothing found or opened · 6 refused (not through Tor, or a relay that is not a `.onion`) · 141 output closed early, e.g. by `| head` (1.1.0 and later) · 1 other error.
 
 ---
 

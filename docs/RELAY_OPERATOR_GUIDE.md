@@ -1,6 +1,6 @@
 # Aska — Relay Operator Guide
 
-## Version 1.0.1 — for `aska-drop` 1.0.1 (Linux x86-64)
+## Version 1.1 — for `aska-drop` 1.1.0 (Linux x86-64)
 
 An Aska **relay** (the "Dead Drop") is the place where sealed notes wait for their receiver. It is a small program that keeps up to a few thousand fixed-size random-looking Blocks in RAM for up to seven days (3,000 with the default capacities), hands all of them to anyone who asks, and forgets them when they expire. It is reachable only as a Tor onion service. It has no accounts, no logs, no admin interface and no disk store; it does not know which Blocks are notes, which are decoys and which are filler, and it cannot tell senders from receivers.
 
@@ -43,9 +43,9 @@ From the release you need two files, and from the source archive three more:
 
 | File | From | Purpose |
 |---|---|---|
-| `aska-drop-1.0.1-linux-x86_64` | release (`https://github.com/secunos/aska/releases`) | the relay binary (static) |
-| `aska-drop-1.0.1-linux-x86_64.minisig` | release | its signature |
-| `deploy/install-debian.sh` | source archive, or `aska-drop-deploy-1.0.1.tar.gz` beside the binary | one-shot installer |
+| `aska-drop-1.1.0-linux-x86_64` | release (`https://github.com/secunos/aska/releases`) | the relay binary (static) |
+| `aska-drop-1.1.0-linux-x86_64.minisig` | release | its signature |
+| `deploy/install-debian.sh` | source archive, or `aska-drop-deploy-1.1.0.tar.gz` beside the binary | one-shot installer |
 | `deploy/torrc.aska-drop` | same | Tor configuration (onion service, no logs, DoS defences) |
 | `deploy/aska-drop.service` | same | hardened systemd unit |
 
@@ -58,8 +58,8 @@ RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox
 On your own computer, in the folder with the files:
 
 ```bash
-sha256sum aska-drop-1.0.1-linux-x86_64                     # compare with the fingerprint
-minisign -V -P RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox -m aska-drop-1.0.1-linux-x86_64
+sha256sum aska-drop-1.1.0-linux-x86_64                     # compare with the fingerprint
+minisign -V -P RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox -m aska-drop-1.1.0-linux-x86_64
 ```
 
 The second command must print `Signature and comment signature verified`. Read `install-debian.sh` before you run it: it is about eighty lines and it reconfigures the firewall, SSH, swap and Tor of the machine it runs on. You should know what it will do.
@@ -73,7 +73,7 @@ The second command must print `Signature and comment signature verified`. Read `
 The installer drops **all** inbound traffic, SSH included, unless you tell it to keep SSH open. Copy everything first and run the install from an SSH session you already have:
 
 ```bash
-scp aska-drop-1.0.1-linux-x86_64 install-debian.sh torrc.aska-drop aska-drop.service root@<server>:/root/
+scp aska-drop-1.1.0-linux-x86_64 install-debian.sh torrc.aska-drop aska-drop.service root@<server>:/root/
 ssh root@<server>
 ```
 
@@ -83,7 +83,7 @@ On the server:
 
 ```bash
 cd /root
-mv aska-drop-1.0.1-linux-x86_64 aska-drop
+mv aska-drop-1.1.0-linux-x86_64 aska-drop
 sha256sum aska-drop                       # the fingerprint again, now on the server
 chmod +x install-debian.sh
 SSH_ALLOW=any ./install-debian.sh         # 5–10 minutes
@@ -145,6 +145,8 @@ Guidance: the defaults suit a circle of a few dozen people. A relay that is "ful
 **Nothing to back up, nothing to rotate on a schedule, nothing to read.** A healthy relay is silent.
 
 **Operating-system and Tor updates** happen on their own (unattended-upgrades). A kernel update needs a reboot now and then; a reboot loses the live Blocks and nothing else.
+
+**What changed in 1.1.0.** The wire protocol is unchanged (ADP/1); a 1.0 client talks to a 1.1 relay and the other way round. The relay now wipes expired labels, spent challenges and refused uploads in memory as it frees them, and the installer configures the RAM-only journal *before* the relay's first start and checks it. The unit file and the Tor configuration are the same as in 1.0.x; upgrading is optional.
 
 **Upgrading the relay binary.** Verify the new release as in section 3, copy the new binary (and the new unit file, if the release notes say it changed) to `/root`, then on the server:
 
