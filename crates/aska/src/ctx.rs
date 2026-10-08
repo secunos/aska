@@ -96,6 +96,8 @@ pub struct Ctx {
     pub input: Input,
     /// Set once doctor warnings were acknowledged; turns exit 0 into exit 2.
     pub warned: bool,
+    /// Receiving seeds held by the `--profile` opened for this run (RM-09); empty otherwise.
+    pub profile_seeds: Vec<aska_core::drop::Secret32>,
 }
 
 /// Options shared by every command (globals on the command line).
@@ -171,6 +173,7 @@ impl Ctx {
         };
 
         let mut relays = Vec::new();
+        let mut profile_seeds = Vec::new();
         if let Some(path) = &g.profile {
             let bytes = files::read_profile(path)
                 .map_err(|e| Fail::new(exit::ERROR, format!("{}: {e}", path.display())))?;
@@ -184,6 +187,7 @@ impl Ctx {
                 )
             })?;
             relays.extend(p.relays());
+            profile_seeds = p.seeds;
         }
         for r in &g.relays {
             let relay = Relay::from_onion(r).map_err(|_| {
@@ -213,7 +217,55 @@ impl Ctx {
             scan_cmd: g.scan_cmd,
             input,
             warned: false,
+            profile_seeds,
         })
+    }
+
+    /// The stored seeds by their Receiving Key checks.
+    pub fn stored_seed_checks(&self) -> Vec<String> {
+        self.profile_seeds
+            .iter()
+            .map(|s| aska_core::xwing::receiving_key_from_seed(s, &[], None, None).check())
+            .collect()
+    }
+
+    /// Resolve what the user typed at a seed prompt: the check of a stored seed (dashes
+    /// optional, any case), an empty line for the only stored seed, or `None` for 24 words.
+    pub fn stored_seed_for(&self, typed: &str) -> Result<Option<&aska_core::drop::Secret32>, Fail> {
+        let t = typed.trim();
+        let checks = self.stored_seed_checks();
+        if t.is_empty() {
+            return match self.profile_seeds.len() {
+                0 => Err(Fail::new(
+                    exit::ERROR,
+                    "no seed given (and the profile holds none)",
+                )),
+                1 => Ok(Some(&self.profile_seeds[0])),
+                _ => Err(Fail::new(
+                    exit::ERROR,
+                    format!(
+                        "the profile holds several receiving keys — name one by its check: {}",
+                        checks.join(", ")
+                    ),
+                )),
+            };
+        }
+        if t.split_whitespace().count() >= 2 {
+            return Ok(None); // 24 words
+        }
+        let want: String = t
+            .chars()
+            .filter(|c| *c != '-')
+            .flat_map(char::to_lowercase)
+            .collect();
+        match checks.iter().position(|c| c.replace('-', "") == want) {
+            Some(i) => Ok(Some(&self.profile_seeds[i])),
+            None if want.len() == 12 => Err(Fail::new(
+                exit::ERROR,
+                format!("no stored receiving key has the check {t}"),
+            )),
+            None => Ok(None),
+        }
     }
 
     /// Session configuration for this invocation.

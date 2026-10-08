@@ -163,8 +163,12 @@ impl PassphraseField {
             i.shift = false;
         }
         self.fallback.set_text("");
-        self.dots.set_label("");
-        self.rebuild_keys();
+        // `refresh` redraws the dots, the "{n} characters entered" count (which `clear` used to
+        // leave stale) and the keys.
+        self.refresh();
+        if !self.inner.borrow().shuffle {
+            self.rebuild_keys();
+        }
     }
 
     fn press(&self, ch: char) {

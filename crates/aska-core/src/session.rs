@@ -1156,11 +1156,24 @@ impl Session {
 
     #[inline(never)]
     fn add_receiving_seed_inner(&mut self, words: &str) -> Result<(), SessionError> {
-        self.touch()?;
-        self.require(&[State::Idle, State::Collecting])?;
         // The seed uses the root's word encoding (§7.1); it is a different key, kept apart.
         let seed = Root::from_words(words)?;
-        let buf = self.lock(seed.as_bytes())?;
+        self.add_receiving_seed_bytes_inner(seed.as_bytes())
+    }
+
+    /// `add_receiving_seed` for a seed held as bytes — one stored in the encrypted profile
+    /// (RM-09) rather than typed as 24 words.
+    pub fn add_receiving_seed_bytes(&mut self, seed: &[u8; 32]) -> Result<(), SessionError> {
+        let r = self.add_receiving_seed_bytes_inner(seed);
+        scrub_stack();
+        r
+    }
+
+    #[inline(never)]
+    fn add_receiving_seed_bytes_inner(&mut self, seed: &[u8; 32]) -> Result<(), SessionError> {
+        self.touch()?;
+        self.require(&[State::Idle, State::Collecting])?;
+        let buf = self.lock(seed)?;
         if let Some(mut old) = self.seed.replace(buf) {
             old.clear();
         }

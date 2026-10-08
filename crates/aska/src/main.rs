@@ -60,7 +60,10 @@ attempt ends with the same advice — connect Tor through a bridge with your pla
                 [distress passphrase] — only those you asked for — then the note until EOF.
   receive / open / share combine / key / share split:
                 key material lines, then an EMPTY line, then the passphrase line (may be empty).
-  profile create: the passphrase.
+  receive --receiving-seed: the seed line is 24 words, the check of a seed stored in the
+                --profile (xxxx-xxxx-xxxx), or empty for the only stored seed.
+  profile create: the passphrase.  profile add-seed: the passphrase, then the 24 words
+                (none with --new).  profile remove-seed: the passphrase.
 Hand-over material is then printed as `KEYCARD …`, `WORDS …`, `SHARE i/n …`, `RELAYS …` lines.";
 
 #[derive(Parser)]
@@ -269,8 +272,12 @@ enum KeyCmd {
     /// New receiving key (DC-02): a 24-word seed to keep and a public askar1… key to give out
     Receive {
         /// Re-derive the public key from an existing seed (prompted) instead of a new one
-        #[arg(long)]
+        #[arg(long, conflicts_with = "stored")]
         from_words: bool,
+        /// Show the public key of a seed stored in the --profile, named by its check
+        /// (xxxx-xxxx-xxxx); with one stored seed the check may be omitted
+        #[arg(long, value_name = "CHECK", num_args = 0..=1, default_missing_value = "")]
+        stored: Option<String>,
     },
     /// Show the key as a Key Card carrying the given relays (and circle key)
     Card {
@@ -311,10 +318,25 @@ enum ProfileCmd {
         #[arg(long)]
         auth_key: bool,
     },
-    /// Open a profile and list its relays (the circle key is never shown)
+    /// Open a profile and list its relays and stored receiving keys (secrets are never shown)
     Open {
         #[arg(long, value_name = "FILE")]
         file: PathBuf,
+    },
+    /// Store a receiving seed in the profile: an existing one (24 words, prompted) or --new
+    AddSeed {
+        #[arg(long, value_name = "FILE")]
+        file: PathBuf,
+        /// Create a fresh seed and store it (its words are shown once, for a paper backup)
+        #[arg(long)]
+        new: bool,
+    },
+    /// Remove a stored receiving seed, named by its check (xxxx-xxxx-xxxx)
+    RemoveSeed {
+        #[arg(long, value_name = "FILE")]
+        file: PathBuf,
+        #[arg(value_name = "CHECK")]
+        check: String,
     },
     /// Overwrite the profile with random bytes and delete it
     Forget {
@@ -426,7 +448,9 @@ fn run(cli: Cli) -> Result<i32, Fail> {
         },
         Cmd::Key { cmd } => match cmd {
             KeyCmd::Words => cmd_misc::key(&mut ctx, false, false)?,
-            KeyCmd::Receive { from_words } => cmd_misc::key_receive(&mut ctx, from_words)?,
+            KeyCmd::Receive { from_words, stored } => {
+                cmd_misc::key_receive(&mut ctx, from_words, stored.as_deref())?
+            }
             KeyCmd::Card { auth_key } => cmd_misc::key(&mut ctx, true, auth_key)?,
         },
         Cmd::Drop { cmd } => match cmd {
@@ -442,6 +466,10 @@ fn run(cli: Cli) -> Result<i32, Fail> {
                 cmd_misc::profile_create(&mut ctx, &file, auth_key)?
             }
             ProfileCmd::Open { file } => cmd_misc::profile_open(&mut ctx, &file)?,
+            ProfileCmd::AddSeed { file, new } => cmd_misc::profile_add_seed(&mut ctx, &file, new)?,
+            ProfileCmd::RemoveSeed { file, check } => {
+                cmd_misc::profile_remove_seed(&mut ctx, &file, &check)?
+            }
             ProfileCmd::Forget { file } => cmd_misc::profile_forget(&mut ctx, &file)?,
         },
     }

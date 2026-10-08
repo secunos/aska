@@ -123,15 +123,38 @@ pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, bucket: Option<&Path>) -> CmdResult {
     ctx.doctor_gate(network)?;
     let mut s = ctx.new_session(aska_proto::DEFAULT_TTL_HOURS, o.class)?;
     if o.receiving_seed {
-        let words = ctx
+        let checks = ctx.stored_seed_checks();
+        let prompt = match checks.len() {
+            0 => "Receiving seed (24 words): ".to_string(),
+            1 => format!(
+                "Receiving seed (24 words), or Enter for the stored key {}: ",
+                checks[0]
+            ),
+            _ => format!(
+                "Receiving seed (24 words), or the check of a stored key ({}): ",
+                checks.join(", ")
+            ),
+        };
+        let typed = ctx
             .input
-            .read_hidden("Receiving seed (24 words): ")?
+            .read_hidden(&prompt)?
             .ok_or_else(|| Fail::new(exit::ERROR, "no seed given"))?;
-        s.add_receiving_seed(&words).map_err(|e| match e {
-            SessionError::Format(_) => Fail::new(exit::ERROR, "not a valid 24-word receiving seed"),
-            e => e.into(),
-        })?;
-        note!("Receiving seed accepted.");
+        match ctx.stored_seed_for(&typed)? {
+            Some(seed) => {
+                let seed = seed.clone();
+                s.add_receiving_seed_bytes(&seed)?;
+                note!("Stored receiving seed selected.");
+            }
+            None => {
+                s.add_receiving_seed(&typed).map_err(|e| match e {
+                    SessionError::Format(_) => {
+                        Fail::new(exit::ERROR, "not a valid 24-word receiving seed")
+                    }
+                    e => e.into(),
+                })?;
+                note!("Receiving seed accepted.");
+            }
+        }
     } else {
         collect(ctx, &mut s, o.shares_only)?;
     }

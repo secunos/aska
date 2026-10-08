@@ -167,6 +167,26 @@ pub fn read_profile(path: &Path) -> io::Result<Zeroizing<Vec<u8>>> {
     Ok(buf)
 }
 
+/// Overwrite a profile in place with a new sealed image of the same size (no new file, no
+/// rename: on an ordinary filesystem the same blocks are rewritten, and both images are
+/// random-looking Blocks under the same passphrase). Checks the path like `read_profile`.
+pub fn rewrite_profile(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    use std::os::unix::fs::OpenOptionsExt;
+    check_profile_path(path)?;
+    if bytes.len() != aska_core::profile::PROFILE_LEN {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "not a profile image",
+        ));
+    }
+    let mut f = OpenOptions::new()
+        .write(true)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open(path)?;
+    f.write_all(bytes)?;
+    f.sync_all()
+}
+
 pub fn shred(path: &Path) -> io::Result<()> {
     use std::os::unix::fs::OpenOptionsExt;
     let len = std::fs::symlink_metadata(path)?.len() as usize;

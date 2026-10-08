@@ -233,6 +233,22 @@ pub fn new_seed_words() -> Result<Zeroizing<String>, Error> {
     Ok(words)
 }
 
+/// `receiving_key_from_words` for a seed held as bytes (a seed stored in the profile, RM-09).
+pub fn receiving_key_from_seed(
+    seed: &[u8; SEED_LEN],
+    relays: &[[u8; 32]],
+    size_class: Option<crate::consts::SizeClass>,
+    ttl_hours: Option<u16>,
+) -> crate::encodings::ReceivingKey {
+    let expanded = Expanded::from_seed(seed);
+    let mut rk = crate::encodings::ReceivingKey::new(expanded.public_key());
+    rk.relays = relays.to_vec();
+    rk.size_class = size_class;
+    rk.ttl_hours = ttl_hours;
+    crate::secret::scrub_stack();
+    rk
+}
+
 /// The public Receiving Key for a seed given as 24 words, with the relay hints the receiver
 /// will poll. Everything secret is derived, used and dropped inside.
 pub fn receiving_key_from_words(

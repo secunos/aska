@@ -6,11 +6,12 @@
 
 use aska_core::cover::{CoverLevel, CoverScheduler};
 use aska_core::doctor::{Check, Finding, Severity};
-use aska_core::drop::{Connector, Relay, TorConnector};
+use aska_core::drop::{Connector, Relay, Secret32, TorConnector};
 use aska_core::session::{Session, SessionConfig};
 use aska_core::tor::TorConfig;
 use std::cell::RefCell;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
@@ -47,6 +48,8 @@ pub struct ProfileInfo {
     pub name: String,
     pub relays: usize,
     pub circle_key: bool,
+    /// Receiving seeds the profile holds (RM-09); only their count is shown.
+    pub seeds: usize,
 }
 
 pub struct App {
@@ -73,6 +76,12 @@ pub struct App {
     cover: Option<CoverScheduler>,
     /// The encrypted profile opened this run, if any (§5.6).
     pub profile: Option<ProfileInfo>,
+    /// Where that profile lives, so the Receiving key screen can rewrite it in place when a
+    /// seed is stored or removed (RM-09). Set together with `profile`.
+    pub profile_path: Option<PathBuf>,
+    /// The receiving seeds of the open profile, for this run (RM-09): the Receive screen
+    /// offers them instead of the 24 words. Each is zeroised when dropped.
+    pub profile_seeds: Vec<Secret32>,
     /// A network operation failed the way a blocked network fails (D-16) and nothing has
     /// succeeded since. Kept across doctor re-runs, which cannot see the condition without
     /// a control port; cleared by the next successful post or fetch or a change of Tor.
@@ -96,8 +105,44 @@ impl App {
             cover_level: CoverLevel::Modest,
             cover: None,
             profile: None,
+            profile_path: None,
+            profile_seeds: Vec::new(),
             blocked_observed: false,
         }))
+    }
+
+    /// A profile was created or opened: remember what it holds for this run.
+    pub fn set_profile(&mut self, info: ProfileInfo, path: PathBuf, seeds: Vec<Secret32>) {
+        self.profile = Some(ProfileInfo {
+            seeds: seeds.len(),
+            ..info
+        });
+        self.profile_path = Some(path);
+        self.profile_seeds = seeds;
+    }
+
+    /// The open profile's seeds changed on disk (stored or removed): keep the run in step.
+    pub fn set_profile_seeds(&mut self, seeds: Vec<Secret32>) {
+        if let Some(p) = self.profile.as_mut() {
+            p.seeds = seeds.len();
+        }
+        self.profile_seeds = seeds;
+    }
+
+    /// Forget the open profile: its name, path and seeds (the seeds are zeroised).
+    pub fn forget_profile(&mut self) {
+        self.profile = None;
+        self.profile_path = None;
+        self.profile_seeds.clear();
+    }
+
+    /// The stored seeds by the twelve-character check of the Receiving Key each yields (no
+    /// relay hints: the check depends on the public key alone), in profile order.
+    pub fn profile_seed_checks(&self) -> Vec<String> {
+        self.profile_seeds
+            .iter()
+            .map(|s| aska_core::xwing::receiving_key_from_seed(s, &[], None, None).check())
+            .collect()
     }
 
     pub fn tor_config(&self) -> TorConfig {

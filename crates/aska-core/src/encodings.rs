@@ -43,6 +43,9 @@ pub const TLV_RELAY: u8 = 0x03;
 pub const TLV_CLASS: u8 = 0x04;
 pub const TLV_TTL: u8 = 0x05;
 pub const TLV_AUTH: u8 = 0x06;
+/// Profile files only (RM-09, 1.1): a stored receiving seed, 32 bytes, repeatable. A hand-over
+/// Key Card MUST NOT carry it; the Key Card decoder skips it as an unknown type (§7.3).
+pub const TLV_PROFILE_SEED: u8 = 0x10;
 
 /// Everything a receiver needs for the symmetric path in one QR (§7.3).
 #[derive(Zeroize, ZeroizeOnDrop)]

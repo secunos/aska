@@ -14,8 +14,9 @@ use adw::prelude::*;
 use aska_core::cancel::CancelToken;
 use aska_core::cover::CoverLevel;
 use aska_core::doctor::Severity;
-use aska_core::drop::{DropClient, Relay};
-use aska_core::profile::{open_profile, seal_profile, Profile, PROFILE_LEN};
+use aska_core::drop::{DropClient, Relay, Secret32};
+use aska_core::profile::{open_profile, seal_profile, Profile, MAX_SEEDS, PROFILE_LEN};
+use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Duration;
@@ -510,6 +511,159 @@ fn shred(path: &Path) -> std::io::Result<()> {
     std::fs::remove_file(path)
 }
 
+/// A profile path must name a regular file (not a symlink, device or FIFO) of exactly the
+/// profile size (review finding C-14: `read` of a device path would never return).
+fn check_profile_path(path: &Path) -> Result<(), String> {
+    let meta = std::fs::symlink_metadata(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    if !meta.file_type().is_file() || meta.len() as usize != PROFILE_LEN {
+        return Err(tr("settings.profile.wrong"));
+    }
+    Ok(())
+}
+
+/// Read a profile file after `check_profile_path`, without following a symlink.
+fn read_profile(path: &Path) -> Result<Zeroizing<Vec<u8>>, String> {
+    use std::io::Read;
+    use std::os::unix::fs::OpenOptionsExt;
+    check_profile_path(path)?;
+    let mut f = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open(path)
+        .map_err(|e| format!("{}: {e}", path.display()))?;
+    let mut buf = Zeroizing::new(Vec::with_capacity(PROFILE_LEN + 1));
+    f.read_to_end(&mut buf)
+        .map_err(|e| format!("{}: {e}", path.display()))?;
+    if buf.len() != PROFILE_LEN {
+        return Err(tr("settings.profile.wrong"));
+    }
+    Ok(buf)
+}
+
+/// Overwrite a profile in place with a new sealed image of the same size — no new file, no
+/// rename: the same blocks are rewritten, and both images are random-looking Blocks under
+/// the same passphrase (the CLI's `files::rewrite_profile`). Checks the path like
+/// `read_profile`.
+fn rewrite_profile(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
+    check_profile_path(path)?;
+    if bytes.len() != PROFILE_LEN {
+        return Err(tr("settings.profile.wrong"));
+    }
+    let io = |e: std::io::Error| format!("{}: {e}", path.display());
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open(path)
+        .map_err(io)?;
+    f.write_all(bytes).map_err(io)?;
+    f.sync_all().map_err(io)
+}
+
+/// Change the open profile (RM-09: a receiving seed stored or removed): ask for its
+/// passphrase in a dialog holding the in-app keypad, then on a worker read the file, open it,
+/// apply `op`, seal it again and overwrite it **in place**; finally the run's copy of the
+/// seeds is replaced by what the file now holds and `on_done` hears the outcome. `op`'s error
+/// text is shown as is; a wrong passphrase, a damaged file and I/O failures get their own.
+pub fn edit_profile<F, D>(ui: &Rc<Ui>, heading: &str, body: &str, op: F, on_done: D)
+where
+    F: FnOnce(&mut Profile) -> Result<(), String> + Send + 'static,
+    D: FnOnce(Result<(), String>) + 'static,
+{
+    let Some(path) = ui.app.borrow().profile_path.clone() else {
+        return on_done(Err(tr("settings.profile.not_open")));
+    };
+    // A plain dialog rather than an alert: the keypad is wider than an alert's message area.
+    let dialog = adw::Dialog::builder()
+        .title(heading)
+        .content_width(640)
+        .build();
+    let tv = adw::ToolbarView::new();
+    tv.add_top_bar(&adw::HeaderBar::new());
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(12)
+        .margin_top(6)
+        .margin_bottom(18)
+        .margin_start(18)
+        .margin_end(18)
+        .build();
+    content.append(
+        &gtk::Label::builder()
+            .label(body)
+            .wrap(true)
+            .xalign(0.0)
+            .build(),
+    );
+    let pass = PassphraseField::new(&tr("settings.profile.passphrase"));
+    content.append(pass.widget());
+    let row = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(8)
+        .halign(gtk::Align::End)
+        .build();
+    let cancel = gtk::Button::with_label(&tr("common.cancel"));
+    let ok = gtk::Button::builder()
+        .label(tr("settings.profile.unlock"))
+        .css_classes(["suggested-action"])
+        .build();
+    row.append(&cancel);
+    row.append(&ok);
+    content.append(&row);
+    tv.set_content(Some(&content));
+    dialog.set_child(Some(&tv));
+
+    let pending: Rc<RefCell<Option<(F, D)>>> = Rc::new(RefCell::new(Some((op, on_done))));
+    {
+        let dialog = dialog.clone();
+        cancel.connect_clicked(move |_| {
+            dialog.close();
+        });
+    }
+    {
+        let pass = pass.clone();
+        dialog.connect_closed(move |_| pass.clear());
+    }
+    {
+        let (ui, dialog, pass) = (ui.clone(), dialog.clone(), pass.clone());
+        ok.connect_clicked(move |_| {
+            let Some((op, on_done)) = pending.borrow_mut().take() else {
+                return;
+            };
+            let pw = pass.value();
+            pass.clear();
+            dialog.close();
+            if pw.trim().is_empty() {
+                return on_done(Err(tr("send.error.passphrase_empty")));
+            }
+            let path = path.clone();
+            let ui2 = ui.clone();
+            worker::run(
+                move || -> Result<Vec<Secret32>, String> {
+                    let bytes = read_profile(&path)?;
+                    let mut p =
+                        open_profile(&bytes, &pw).map_err(|_| tr("settings.profile.wrong"))?;
+                    drop(bytes);
+                    op(&mut p)?;
+                    let sealed = seal_profile(&p, &pw).map_err(|e| e.to_string())?;
+                    drop(pw);
+                    rewrite_profile(&path, &sealed)?;
+                    Ok(std::mem::take(&mut p.seeds))
+                },
+                move |r| match r {
+                    Ok(seeds) => {
+                        ui2.app.borrow_mut().set_profile_seeds(seeds);
+                        on_done(Ok(()));
+                    }
+                    Err(e) => on_done(Err(e)),
+                },
+            );
+        });
+    }
+    dialog.present(ui.window().as_ref());
+}
+
 fn file_name(p: &Path) -> String {
     p.file_name()
         .map(|n| n.to_string_lossy().into_owned())
@@ -548,20 +702,27 @@ fn profile_section(ui: &Rc<Ui>, root: &gtk::Box) {
         Rc::new(move || {
             let a = ui.app.borrow();
             status.set_label(&match &a.profile {
-                Some(p) => trf(
-                    "settings.profile.open_status",
-                    &[
-                        ("name", &p.name),
-                        ("n", &p.relays.to_string()),
-                        (
-                            "key",
-                            &tr(if p.circle_key {
-                                "settings.profile.key_yes"
-                            } else {
-                                "settings.profile.key_no"
-                            }),
-                        ),
-                    ],
+                Some(p) => format!(
+                    "{}\n{}",
+                    trf(
+                        "settings.profile.open_status",
+                        &[
+                            ("name", &p.name),
+                            ("n", &p.relays.to_string()),
+                            (
+                                "key",
+                                &tr(if p.circle_key {
+                                    "settings.profile.key_yes"
+                                } else {
+                                    "settings.profile.key_no"
+                                }),
+                            ),
+                        ],
+                    ),
+                    trf(
+                        "settings.profile.keys_status",
+                        &[("n", &p.seeds.to_string()), ("max", &MAX_SEEDS.to_string())],
+                    )
                 ),
                 None => tr("settings.profile.none"),
             });
@@ -627,6 +788,7 @@ fn profile_section(ui: &Rc<Ui>, root: &gtk::Box) {
             let p = Profile {
                 relays: relays.iter().map(|r| r.pubkey).collect(),
                 auth_key: relays.first().and_then(|r| r.auth_key.clone()),
+                seeds: Vec::new(),
             };
             let (n, circle) = (relays.len(), p.auth_key.is_some());
             let (ui3, msg3, refresh3) = (ui2.clone(), msg2.clone(), refresh2.clone());
@@ -648,11 +810,16 @@ fn profile_section(ui: &Rc<Ui>, root: &gtk::Box) {
                 },
                 move |r| match r {
                     Ok(path) => {
-                        ui3.app.borrow_mut().profile = Some(ProfileInfo {
-                            name: file_name(&path),
-                            relays: n,
-                            circle_key: circle,
-                        });
+                        ui3.app.borrow_mut().set_profile(
+                            ProfileInfo {
+                                name: file_name(&path),
+                                relays: n,
+                                circle_key: circle,
+                                seeds: 0,
+                            },
+                            path.clone(),
+                            Vec::new(),
+                        );
                         refresh3();
                         say(
                             &msg3,
@@ -687,33 +854,29 @@ fn profile_section(ui: &Rc<Ui>, root: &gtk::Box) {
             say(&msg2, &tr("settings.profile.opening"), false);
             let (ui3, msg3, refresh3) = (ui2.clone(), msg2.clone(), refresh2.clone());
             worker::run(
-                move || -> Result<(String, Profile), String> {
+                move || -> Result<(PathBuf, Profile), String> {
                     // A profile is exactly PROFILE_LEN bytes; refuse links and anything else
                     // before reading (review finding C-14: `read` of a device path would
                     // never return).
-                    let meta = std::fs::symlink_metadata(&path)
-                        .map_err(|e| format!("{}: {e}", path.display()))?;
-                    if !meta.file_type().is_file() || meta.len() as usize != PROFILE_LEN {
-                        return Err(tr("settings.profile.wrong"));
-                    }
-                    let bytes = Zeroizing::new(
-                        std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?,
-                    );
+                    let bytes = read_profile(&path)?;
                     let p = open_profile(&bytes, &pw).map_err(|_| tr("settings.profile.wrong"))?;
                     drop(pw);
-                    Ok((file_name(&path), p))
+                    Ok((path, p))
                 },
                 move |r| match r {
-                    Ok((name, p)) => {
+                    Ok((path, mut p)) => {
+                        let name = file_name(&path);
                         let relays = p.relays();
                         let info = ProfileInfo {
                             name: name.clone(),
                             relays: relays.len(),
                             circle_key: p.auth_key.is_some(),
+                            seeds: p.seeds.len(),
                         };
+                        let seeds = std::mem::take(&mut p.seeds);
                         let mut a = ui3.app.borrow_mut();
                         a.set_relays(relays);
-                        a.profile = Some(info);
+                        a.set_profile(info, path, seeds);
                         drop(a);
                         refresh3();
                         say(
@@ -766,8 +929,10 @@ fn profile_section(ui: &Rc<Ui>, root: &gtk::Box) {
             confirm.connect_response(Some("forget"), move |_, _| match shred(&path) {
                 Ok(()) => {
                     let mut a = ui3.app.borrow_mut();
-                    if a.profile.as_ref().map(|p| p.name.as_str()) == Some(name.as_str()) {
-                        a.profile = None;
+                    if a.profile_path.as_deref() == Some(path.as_path())
+                        || a.profile.as_ref().map(|p| p.name.as_str()) == Some(name.as_str())
+                    {
+                        a.forget_profile();
                     }
                     drop(a);
                     refresh3();

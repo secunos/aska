@@ -398,6 +398,151 @@ fn closed_stdout_exits_141_quietly() {
     }
 }
 
+/// RM-09 (1.1): receiving seeds kept in the encrypted profile — add (new and from words),
+/// list by check, show the public key again, receive with a stored seed, remove; a profile
+/// written by 1.0.x (no seeds) still opens; the file stays one 4 KiB Block.
+#[test]
+fn profile_stores_receiving_seeds() {
+    let b = Bench::new("profseed");
+    let prof = b.path("keys.aska");
+    let p = prof.to_str().unwrap();
+    let made = b.aska(
+        &["--relay", ONION, "profile", "create", "--file", p],
+        "pp\n",
+    );
+    assert!(made.ok(), "{}", made.dump());
+    // Add a fresh seed: words once (paper backup), public key and check.
+    let added = b.aska(&["profile", "add-seed", "--file", p, "--new"], "pp\n");
+    assert!(added.ok(), "{}", added.dump());
+    let seed_words = added.field("SEED").expect("SEED line");
+    let askar1 = added.field("RECEIVING").expect("RECEIVING line");
+    let check1 = added.field("CHECK").expect("CHECK line");
+    assert_eq!(seed_words.split_whitespace().count(), 24);
+    assert_eq!(std::fs::metadata(&prof).unwrap().len(), 4096);
+    // Add an existing seed from its words; the same seed again is refused.
+    let other = b.aska(&["--relay", ONION, "key", "receive"], "");
+    let words2 = other.field("SEED").unwrap();
+    let check2 = other.field("CHECK").unwrap();
+    let added2 = b.aska(
+        &["profile", "add-seed", "--file", p],
+        &format!("pp\n{words2}\n"),
+    );
+    assert!(added2.ok(), "{}", added2.dump());
+    assert_eq!(added2.field("CHECK").as_deref(), Some(check2.as_str()));
+    let dup = b.aska(
+        &["profile", "add-seed", "--file", p],
+        &format!("pp\n{words2}\n"),
+    );
+    assert_eq!(dup.code, 1, "{}", dup.dump());
+    assert!(dup.stderr.contains("already holds"), "{}", dup.dump());
+    // Listed by check; secrets never printed.
+    let shown = b.aska(&["profile", "open", "--file", p], "pp\n");
+    assert!(shown.ok(), "{}", shown.dump());
+    assert!(
+        shown.stdout.contains(&format!("receiving key {check1}")),
+        "{}",
+        shown.dump()
+    );
+    assert!(shown.stdout.contains(&format!("receiving key {check2}")));
+    assert!(!shown.stdout.contains(&seed_words) && !shown.stdout.contains(&words2));
+    // The public key of a stored seed, named by its check (dashes optional).
+    let again = b.aska(
+        &[
+            "--profile",
+            p,
+            "--relay",
+            ONION,
+            "key",
+            "receive",
+            "--stored",
+            &check1,
+        ],
+        "pp\n",
+    );
+    assert!(again.ok(), "{}", again.dump());
+    let askar1_hinted = again.field("RECEIVING").unwrap();
+    assert_eq!(again.field("CHECK").as_deref(), Some(check1.as_str()));
+    // The profile's relay is already the hint; the same relay given again adds nothing.
+    assert_eq!(askar1_hinted, askar1);
+    let bare = b.aska(
+        &[
+            "--profile",
+            p,
+            "key",
+            "receive",
+            "--stored",
+            &check1.replace('-', ""),
+        ],
+        "pp\n",
+    );
+    assert_eq!(bare.field("RECEIVING").as_deref(), Some(askar1.as_str()));
+    // A sender posts to the stored key; the receiver names the stored seed by its check —
+    // no words typed.
+    let sent = b.aska(
+        &["send", "--to", &askar1_hinted, "--passphrase"],
+        &format!("real-pass\n{NOTE}\n"),
+    );
+    assert!(sent.ok(), "{}", sent.dump());
+    let got = b.aska(
+        &["--profile", p, "receive", "--receiving-seed"],
+        &format!("pp\n{check1}\nreal-pass\n"),
+    );
+    assert!(got.ok(), "{}", got.dump());
+    assert!(got.stdout.contains(NOTE), "{}", got.dump());
+    assert!(
+        got.stderr.contains("Stored receiving seed selected"),
+        "{}",
+        got.dump()
+    );
+    // Two stored seeds: an empty seed line is ambiguous; a wrong check is refused.
+    let amb = b.aska(
+        &[
+            "--profile",
+            p,
+            "receive",
+            "--receiving-seed",
+            "--attempts",
+            "1",
+        ],
+        "pp\n\n\n",
+    );
+    assert_eq!(amb.code, 1, "{}", amb.dump());
+    assert!(amb.stderr.contains("several"), "{}", amb.dump());
+    let bad = b.aska(
+        &[
+            "--profile",
+            p,
+            "receive",
+            "--receiving-seed",
+            "--attempts",
+            "1",
+        ],
+        "pp\nqqqq-qqqq-qqqq\n\n",
+    );
+    assert_eq!(bad.code, 1, "{}", bad.dump());
+    // Remove one; with one left, an empty seed line selects it; words still work too.
+    let rm = b.aska(&["profile", "remove-seed", "--file", p, &check2], "pp\n");
+    assert!(rm.ok(), "{}", rm.dump());
+    let shown = b.aska(&["profile", "open", "--file", p], "pp\n");
+    assert!(!shown.stdout.contains(&format!("receiving key {check2}")));
+    let got = b.aska(
+        &["--profile", p, "receive", "--receiving-seed"],
+        "pp\n\nreal-pass\n",
+    );
+    assert!(got.ok() && got.stdout.contains(NOTE), "{}", got.dump());
+    let got_words = b.aska(
+        &["--profile", p, "receive", "--receiving-seed"],
+        &format!("pp\n{seed_words}\nreal-pass\n"),
+    );
+    assert!(
+        got_words.ok() && got_words.stdout.contains(NOTE),
+        "{}",
+        got_words.dump()
+    );
+    let none = b.aska(&["profile", "remove-seed", "--file", p, &check2], "pp\n");
+    assert_eq!(none.code, 5, "{}", none.dump());
+}
+
 #[test]
 fn profile_create_open_use_and_forget() {
     let b = Bench::new("profile");

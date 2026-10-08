@@ -122,8 +122,36 @@ pub fn key(ctx: &mut Ctx, card: bool, auth_key: bool) -> CmdResult {
 /// `aska key receive [--from-words]` (DC-02): a receiving seed (24 words, shown once on the
 /// alternate screen) and its public Receiving Key (`askar1…`, printed — it is not secret) with
 /// the twelve-character check (a hash of the public key) to confirm over another channel.
-pub fn key_receive(ctx: &mut Ctx, from_words: bool) -> CmdResult {
+pub fn key_receive(ctx: &mut Ctx, from_words: bool, stored: Option<&str>) -> CmdResult {
     ctx.doctor_gate(false)?;
+    if let Some(check) = stored {
+        // A seed kept in the profile (RM-09): show its public key again, nothing secret.
+        if ctx.profile_seeds.is_empty() {
+            return Err(Fail::new(
+                exit::ERROR,
+                "--stored needs a --profile that holds a receiving seed",
+            ));
+        }
+        let seed = ctx.stored_seed_for(check)?.ok_or_else(|| {
+            Fail::new(
+                exit::ERROR,
+                format!("not the check of a stored key: {check}"),
+            )
+        })?;
+        let relays: Vec<[u8; 32]> = ctx.relays.iter().map(|r| r.pubkey).collect();
+        let rk = aska_core::xwing::receiving_key_from_seed(seed, &relays, None, None);
+        let text = rk.encode()?;
+        let check = rk.check();
+        out!("RECEIVING {text}")?;
+        out!("CHECK {check}")?;
+        if ctx.input.is_interactive() {
+            note!(
+                "\nReceiving Key of the stored seed {check} ({} characters).",
+                text.len()
+            );
+        }
+        return Ok(());
+    }
     let words: crate::term::SecretLine = if from_words {
         ctx.input
             .read_hidden("Receiving seed (24 words): ")?
@@ -431,6 +459,7 @@ pub fn profile_create(ctx: &mut Ctx, file: &Path, auth_key: bool) -> CmdResult {
     let p = Profile {
         relays: ctx.relays.iter().map(|r| r.pubkey).collect(),
         auth_key: ctx.relays.first().and_then(|r| r.auth_key.clone()),
+        seeds: Vec::new(),
     };
     note!("Deriving the profile key (Argon2id, 256 MiB) …");
     let bytes = seal_profile(&p, &pw)?;
@@ -478,6 +507,128 @@ pub fn profile_open(ctx: &mut Ctx, file: &Path) -> CmdResult {
             "none"
         }
     )?;
+    for s in p.stored_seeds() {
+        out!("  receiving key {} (seed stored, not shown)", s.check)?;
+    }
+    Ok(())
+}
+
+/// Open `file` with a prompted passphrase, for the commands that rewrite it.
+fn open_for_update(ctx: &mut Ctx, file: &Path) -> Result<(Profile, crate::term::SecretLine), Fail> {
+    let bytes = files::read_profile(file)
+        .map_err(|e| Fail::new(exit::ERROR, format!("{}: {e}", file.display())))?;
+    let pw = ctx
+        .input
+        .read_hidden("Profile passphrase: ")?
+        .ok_or_else(|| Fail::new(exit::ERROR, "no passphrase given"))?;
+    let p = open_profile(&bytes, &pw).map_err(|_| {
+        Fail::new(
+            exit::NOTHING,
+            "profile did not open (wrong passphrase, or not a profile)",
+        )
+    })?;
+    Ok((p, pw))
+}
+
+/// Seal and write the profile back over the same file (same size, in place).
+fn rewrite(ctx: &Ctx, file: &Path, p: &Profile, pw: &str) -> CmdResult {
+    let _ = ctx;
+    note!("Deriving the profile key (Argon2id, 256 MiB) …");
+    let bytes = seal_profile(p, pw)?;
+    files::rewrite_profile(file, &bytes)?;
+    Ok(())
+}
+
+/// `aska profile add-seed --file F [--new]` (RM-09).
+pub fn profile_add_seed(ctx: &mut Ctx, file: &Path, new: bool) -> CmdResult {
+    ctx.doctor_gate(false)?;
+    let (mut p, pw) = open_for_update(ctx, file)?;
+    let seed: aska_core::drop::Secret32 = if new {
+        aska_core::drop::secret32(*aska_core::xwing::generate_seed()?)
+    } else {
+        let words = ctx
+            .input
+            .read_hidden("Receiving seed (24 words): ")?
+            .ok_or_else(|| Fail::new(exit::ERROR, "no seed given"))?;
+        let root = aska_core::Root::from_words(&words)
+            .map_err(|_| Fail::new(exit::ERROR, "not a valid 24-word receiving seed"))?;
+        aska_core::drop::secret32(*root.as_bytes())
+    };
+    let relays: Vec<[u8; 32]> = p.relays.clone();
+    let rk = aska_core::xwing::receiving_key_from_seed(&seed, &relays, None, None);
+    let check = rk.check();
+    let text = rk.encode()?;
+    p.add_seed(seed).map_err(|e| match e {
+        aska_core::Error::TooLarge => Fail::new(
+            exit::ERROR,
+            format!(
+                "the profile already holds {} receiving seeds (the most it can)",
+                aska_core::profile::MAX_SEEDS
+            ),
+        ),
+        _ => Fail::new(
+            exit::ERROR,
+            format!("the profile already holds the key {check}"),
+        ),
+    })?;
+    rewrite(ctx, file, &p, &pw)?;
+    drop(pw);
+    if new {
+        // Words once, for a paper backup: the profile now holds the seed, but a lost or
+        // forgotten profile would otherwise lose the key with it.
+        let words = aska_core::Root::from_bytes(***p.seeds.last().expect("just added")).to_words();
+        if ctx.input.is_interactive() {
+            let s = ctx.new_session(aska_proto::DEFAULT_TTL_HOURS, None)?;
+            let wb = crate::term::words_block(&words);
+            let mut notes = Zeroizing::new(String::with_capacity(wb.len() + 160));
+            notes.push_str(&wb);
+            notes.push_str(
+                "\nThe seed is stored in the profile; these words are its paper backup.\n\
+                 Without the profile or the words, notes sent to this key cannot be read.",
+            );
+            drop(wb);
+            crate::handover::show_material(
+                ctx,
+                &s,
+                "Receiving seed stored — its words, once",
+                &words,
+                &notes,
+                "Press any key to continue to the public key",
+                "SEED",
+            )?;
+        } else {
+            out!("SEED {}", words.as_str())?;
+        }
+    }
+    out!("RECEIVING {text}")?;
+    out!("CHECK {check}")?;
+    note!(
+        "Stored in {} as receiving key {check} ({} of {}).",
+        file.display(),
+        p.seeds.len(),
+        aska_core::profile::MAX_SEEDS
+    );
+    Ok(())
+}
+
+/// `aska profile remove-seed --file F CHECK` (RM-09).
+pub fn profile_remove_seed(ctx: &mut Ctx, file: &Path, check: &str) -> CmdResult {
+    ctx.doctor_gate(false)?;
+    let (mut p, pw) = open_for_update(ctx, file)?;
+    let i = p.seed_by_check(check).ok_or_else(|| {
+        Fail::new(
+            exit::NOTHING,
+            format!("no stored receiving key has the check {check}"),
+        )
+    })?;
+    let removed = p.remove_seed(i).expect("index from seed_by_check");
+    drop(removed);
+    rewrite(ctx, file, &p, &pw)?;
+    note!(
+        "Removed receiving key {check} from {} ({} stored seed(s) left). Notes sent to it can no longer be read here.",
+        file.display(),
+        p.seeds.len()
+    );
     Ok(())
 }
 

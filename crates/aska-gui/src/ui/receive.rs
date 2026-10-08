@@ -25,11 +25,17 @@ const SCAN_CMD: &str = "zbarcam --raw --oneshot -Sdisable -Sqrcode.enable";
 #[derive(Clone)]
 struct Form {
     material: gtk::TextView,
+    /// The frame around `material`, hidden while a stored key stands in for the words.
+    material_frame: gtk::Frame,
     status: gtk::Label,
     add: gtk::Button,
     scan: gtk::Button,
     reset: gtk::Button,
     seed_switch: Option<adw::SwitchRow>,
+    /// "Use a stored key" (RM-09): entry 0 is "type the words", entry i the i-th seed of the
+    /// open profile. Built only when the profile holds a seed, so a run without one lays the
+    /// page out exactly as before; shown only while the seed switch is on.
+    stored: Option<(adw::PreferencesGroup, adw::ComboRow)>,
     relays: adw::EntryRow,
     pass: PassphraseField,
     go: gtk::Button,
@@ -53,6 +59,21 @@ pub fn build(ui: &Rc<Ui>, shares_only: bool) -> adw::NavigationPage {
     } else {
         "receive.material.hint"
     })));
+    // A seed kept in the open profile may stand in for the 24 words (RM-09). The row stays
+    // invisible — taking no space, so the layout does not shift — until the seed switch is
+    // on and the profile holds a seed; its entries follow the profile each time the page is
+    // shown (a key stored on the Receiving key screen must be offered on the way back).
+    let stored = (!shares_only).then(|| {
+        let g = adw::PreferencesGroup::builder().visible(false).build();
+        let row = adw::ComboRow::builder()
+            .title(tr("receive.stored"))
+            .model(&gtk::StringList::new(&[&tr("receive.stored.type")]))
+            .selected(0)
+            .build();
+        g.add(&row);
+        km.append(&g);
+        (g, row)
+    });
     // The key is a secret too: no undo history, copy and cut off (paste stays available).
     let material = super::secret_text_view(90, true);
     let sw = gtk::ScrolledWindow::builder()
@@ -60,7 +81,8 @@ pub fn build(ui: &Rc<Ui>, shares_only: bool) -> adw::NavigationPage {
         .hscrollbar_policy(gtk::PolicyType::Never)
         .min_content_height(90)
         .build();
-    km.append(&gtk::Frame::builder().child(&sw).build());
+    let material_frame = gtk::Frame::builder().child(&sw).build();
+    km.append(&material_frame);
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let add = gtk::Button::builder()
         .label(tr("receive.add"))
@@ -140,11 +162,13 @@ pub fn build(ui: &Rc<Ui>, shares_only: bool) -> adw::NavigationPage {
 
     let f = Form {
         material,
+        material_frame,
         status,
         add: add.clone(),
         scan: scan.clone(),
         reset: reset.clone(),
         seed_switch: seed_switch.clone(),
+        stored,
         relays,
         pass,
         go: go.clone(),
@@ -156,6 +180,9 @@ pub fn build(ui: &Rc<Ui>, shares_only: bool) -> adw::NavigationPage {
     {
         let (ui2, f2) = (ui.clone(), f.clone());
         add.connect_clicked(move |_| {
+            if let Some(i) = stored_choice(&f2) {
+                return add_stored_seed(&ui2, &f2, i);
+            }
             let text = {
                 let b = f2.material.buffer();
                 let (s, e) = b.bounds();
@@ -163,6 +190,19 @@ pub fn build(ui: &Rc<Ui>, shares_only: bool) -> adw::NavigationPage {
             };
             super::wipe_text_view(&f2.material);
             add_material(&ui2, &f2, &text);
+        });
+    }
+    if let Some((_, row)) = &f.stored {
+        // Choosing another key starts over, as switching modes does.
+        let (ui2, f2) = (ui.clone(), f.clone());
+        row.connect_selected_notify(move |_| {
+            ui2.app.borrow_mut().close_session();
+            f2.status.set_label(&tr("receive.status.none"));
+            f2.status.add_css_class("dim-label");
+            f2.go.set_sensitive(false);
+            f2.reset.set_sensitive(false);
+            f2.error.set_label("");
+            sync_stored(&f2);
         });
     }
     {
@@ -194,6 +234,7 @@ pub fn build(ui: &Rc<Ui>, shares_only: bool) -> adw::NavigationPage {
             f2.go.set_sensitive(false);
             f2.reset.set_sensitive(false);
             f2.error.set_label("");
+            sync_stored(&f2);
         });
     }
 
@@ -216,7 +257,40 @@ pub fn build(ui: &Rc<Ui>, shares_only: bool) -> adw::NavigationPage {
             }
         });
     }
+    // The stored keys on offer follow the profile (first shown, and back from Receiving key).
+    refresh_stored(ui, &f);
+    {
+        let (ui, f) = (ui.clone(), f.clone());
+        page.connect_showing(move |_| refresh_stored(&ui, &f));
+    }
     page
+}
+
+/// Put the open profile's stored keys (by check) into the "Use a stored key" row when they
+/// changed; an unchanged list is left alone so the choice and the Session survive a visit
+/// to the Receiving key screen.
+fn refresh_stored(ui: &Rc<Ui>, f: &Form) {
+    let Some((_, row)) = &f.stored else {
+        return;
+    };
+    let mut names: Vec<String> = vec![tr("receive.stored.type")];
+    names.extend(ui.app.borrow().profile_seed_checks());
+    let same = row
+        .model()
+        .and_downcast::<gtk::StringList>()
+        .is_some_and(|m| {
+            m.n_items() as usize == names.len()
+                && names
+                    .iter()
+                    .enumerate()
+                    .all(|(i, n)| m.string(i as u32).as_deref() == Some(n.as_str()))
+        });
+    if !same {
+        let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+        row.set_model(Some(&gtk::StringList::new(&refs)));
+        row.set_selected(0);
+    }
+    sync_stored(f);
 }
 
 fn relays_text(a: &App) -> String {
@@ -241,6 +315,63 @@ fn parse_relays(text: &str) -> Result<Vec<Relay>, String> {
         }
     }
     Ok(out)
+}
+
+/// The stored seed chosen on the page (its index in the profile), when the seed switch is on
+/// and the "Use a stored key" row names one.
+fn stored_choice(f: &Form) -> Option<usize> {
+    let seed_mode = f.seed_switch.as_ref().is_some_and(|s| s.is_active());
+    let (_, row) = f.stored.as_ref()?;
+    (seed_mode && row.selected() > 0).then(|| row.selected() as usize - 1)
+}
+
+/// Show the stored-key row only in seed mode; while a stored key is chosen the words field
+/// and the camera have nothing to add.
+fn sync_stored(f: &Form) {
+    let Some((group, row)) = &f.stored else {
+        return;
+    };
+    let seed_mode = f.seed_switch.as_ref().is_some_and(|s| s.is_active());
+    let any = row.model().is_some_and(|m| m.n_items() > 1);
+    group.set_visible(seed_mode && any);
+    let typed = stored_choice(f).is_none();
+    f.material_frame.set_visible(typed);
+    f.scan.set_sensitive(typed);
+}
+
+/// A seed from the open profile stands in for the 24 words (RM-09).
+fn add_stored_seed(ui: &Rc<Ui>, f: &Form, index: usize) {
+    f.error.set_label("");
+    if !ensure_session(ui, f) {
+        return;
+    }
+    let (result, check) = {
+        let mut a = ui.app.borrow_mut();
+        let Some(check) = a.profile_seed_checks().get(index).cloned() else {
+            drop(a);
+            return fail(f, &tr("settings.profile.not_open"));
+        };
+        let App {
+            session,
+            profile_seeds,
+            ..
+        } = &mut *a;
+        let r = match (session.as_mut(), profile_seeds.get(index)) {
+            (Some(s), Some(seed)) => s.add_receiving_seed_bytes(seed),
+            _ => Err(SessionError::WrongState(aska_core::session::State::Closed)),
+        };
+        (r, check)
+    };
+    f.reset.set_sensitive(true);
+    match result {
+        Ok(()) => {
+            f.status
+                .set_label(&trf("receive.status.stored_seed", &[("check", &check)]));
+            f.status.remove_css_class("dim-label");
+            f.go.set_sensitive(true);
+        }
+        Err(e) => fail(f, &e.to_string()),
+    }
 }
 
 fn fail(f: &Form, msg: &str) {
