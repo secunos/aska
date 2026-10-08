@@ -7,6 +7,6 @@ If you believe you have found a security flaw in Aska — in the Block format, t
 
 What to expect: an acknowledgement, a fix or a written reason why not, and credit in the release notes if you want it. There is no bug bounty.
 
-**Status of the current release.** Aska 1.0.1 (1.0.0 plus a command-line fix) has passed the project's own gates and an internal security pre-review (`docs/Aska_Internal_PreReview_Report_v0.1.md`); it has **not** had an independent security audit or a legal review. The Security Review Package (`docs/Aska_Security_Review_Package_v0.1.md`) and the Legal Review Brief (`docs/Aska_Legal_Review_Brief_v0.1.md`) are published so that anyone qualified can conduct one; a report from such a review will be published with the next release.
+**Status of the current release.** Aska 1.1.0 has passed the project's own gates and an internal security pre-review (`docs/Aska_Internal_PreReview_Report_v0.1.md`); it has **not** had an independent security audit or a legal review. The Security Review Package (`docs/Aska_Security_Review_Package_v0.1.md`) and the Legal Review Brief (`docs/Aska_Legal_Review_Brief_v0.1.md`) are published so that anyone qualified can conduct one; a report from such a review will be published with the next release.
 
 **Verifying a release** is described in `docs/USER_GUIDE.md`, section 3: get the fingerprint out of band first, then the files; releases are signed with minisign key `79AD6224AFF176C9` (`release/aska-release.pub`). Never install an update because software told you one exists.
