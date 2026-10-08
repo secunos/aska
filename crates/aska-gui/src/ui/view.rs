@@ -1,14 +1,17 @@
-//! Screen 5 — View (Client Design §5.5): the note, rendered from the Session's locked buffer
-//! into a read-only, non-selectable label; a visible countdown; a single **Close and burn**.
+//! Screen 5 — View (Client Design §5.5): the note, rendered from a locked buffer by the
+//! word-at-a-time `NoteView` (C-02, 1.1: no label, no text buffer, nothing in the
+//! accessibility tree); a visible countdown; a single **Close and burn**.
 //! No copy, save, forward, print or share. A footer states plainly what this system can and
 //! cannot block about screen capture (§6.2). Decoy, real and distress slots all arrive here
 //! through the same `OpenInfo` and are drawn by the same code — the distress action already
 //! happened in the core before this page existed, and nothing here looks at it.
 
+use super::noteview::NoteView;
 use super::{body, hint, pill, Ui};
 use crate::i18n::{tr, trf};
 use adw::prelude::*;
 use aska_core::consts::PTYPE_TEXT;
+use aska_core::secret::LockedBuf;
 use aska_core::session::OpenInfo;
 use gtk::glib;
 use std::cell::Cell;
@@ -21,9 +24,9 @@ use zeroize::Zeroizing;
 pub fn build(ui: &Rc<Ui>, info: OpenInfo, seed_used: bool) -> adw::NavigationPage {
     let (root, clamp) = body(720);
 
-    // The text is copied out of locked memory into the label's own storage for as long as
-    // the page lives (the C-02 residual: GTK owns the rendering buffer), then cleared.
-    let text: Zeroizing<String> = {
+    // The text goes from the Session's locked buffer into the viewer's own locked buffer —
+    // never into a GTK label or text buffer (C-02). A binary note is shown as a hex dump.
+    let text: LockedBuf = {
         let a = ui.app.borrow();
         let pt = a
             .session
@@ -31,26 +34,30 @@ pub fn build(ui: &Rc<Ui>, info: OpenInfo, seed_used: bool) -> adw::NavigationPag
             .and_then(|s| s.plaintext())
             .unwrap_or(&[]);
         if info.ptype == PTYPE_TEXT {
-            Zeroizing::new(String::from_utf8_lossy(pt).into_owned())
+            let mut b = LockedBuf::with_capacity(pt.len().max(1));
+            // Invalid UTF-8 in a text note is replaced, never shown raw.
+            match std::str::from_utf8(pt) {
+                Ok(s) => b.set(s.as_bytes()),
+                Err(_) => {
+                    let lossy: Zeroizing<String> =
+                        Zeroizing::new(String::from_utf8_lossy(pt).into_owned());
+                    b = LockedBuf::with_capacity(lossy.len().max(1));
+                    b.set(lossy.as_bytes());
+                }
+            }
+            b
         } else {
-            Zeroizing::new(trf(
+            let dump: Zeroizing<String> = Zeroizing::new(trf(
                 "view.binary",
                 &[("n", &pt.len().to_string()), ("hex", &hexdump(pt))],
-            ))
+            ));
+            LockedBuf::from_slice(dump.as_bytes())
         }
     };
 
-    let note = gtk::Label::builder()
-        .label(text.as_str())
-        .wrap(true)
-        .wrap_mode(gtk::pango::WrapMode::WordChar)
-        .xalign(0.0)
-        .yalign(0.0)
-        .selectable(false)
-        .can_focus(false)
-        .css_classes(["aska-note"])
-        .build();
-    drop(text);
+    let note = NoteView::new();
+    note.add_css_class("aska-note");
+    note.set_text(text);
     let frame = gtk::Frame::builder().child(&note).build();
     let sw = gtk::ScrolledWindow::builder()
         .child(&frame)
@@ -81,7 +88,7 @@ pub fn build(ui: &Rc<Ui>, info: OpenInfo, seed_used: bool) -> adw::NavigationPag
             if closed.replace(true) {
                 return;
             }
-            super::wipe_label(&note);
+            note.clear();
             ui.go_home(Some(&tr(if seed_used {
                 "view.burned_seed"
             } else {
@@ -132,7 +139,7 @@ pub fn build(ui: &Rc<Ui>, info: OpenInfo, seed_used: bool) -> adw::NavigationPag
         let ui = ui.clone();
         page.connect_hidden(move |_| {
             if !closed.replace(true) {
-                super::wipe_label(&note);
+                note.clear();
                 ui.app.borrow_mut().close_session();
                 ui.toast(&tr("view.burned"));
             }

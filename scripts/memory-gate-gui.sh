@@ -7,8 +7,10 @@
 #       through a toolkit text buffer — C-17, 1.1 step 2),
 #   (2) the note text, the Key Card string and the 24 words (the toolkit's own buffers:
 #       C-02 residual).
-# (1) fails the gate. (2) is reported: GTK text buffers, labels and Pango caches may keep
-# copies until the memory is reused; the custom read-only viewer (C-02, v1.1) removes them.
+# (1) fails the gate. (2) is reported: GTK labels and Pango caches may keep copies of the
+# Key Card until the memory is reused; the note itself is drawn by the word-at-a-time
+# `NoteView` since 1.1 (C-02) — while it is on screen the only copies are the Session's and
+# the viewer's locked buffers, both wiped on Close and burn.
 # Needs: python3, xdotool, zbarimg, import (ImageMagick) and a display (Xvfb :96 is started
 # when DISPLAY is unset). Usage: scripts/memory-gate-gui.sh [path/to/aska-gui]
 set -eu

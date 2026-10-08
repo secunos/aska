@@ -5,6 +5,7 @@
 pub mod handover;
 pub mod home;
 pub mod keypad;
+pub mod noteview;
 pub mod qr;
 pub mod receive;
 pub mod rxkey;
