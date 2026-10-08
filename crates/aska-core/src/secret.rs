@@ -147,6 +147,14 @@ impl LockedBuf {
         self.len += data.len();
     }
 
+    /// Shorten to `len` bytes, zeroising the bytes dropped. No-op if `len >= self.len()`.
+    pub fn truncate(&mut self, len: usize) {
+        if len < self.len {
+            self.as_mut_slice()[len..].zeroize();
+            self.len = len;
+        }
+    }
+
     /// Zeroise the whole capacity and set the length to zero.
     pub fn clear(&mut self) {
         // SAFETY: the whole capacity is one initialised allocation.

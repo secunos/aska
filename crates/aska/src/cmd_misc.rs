@@ -124,12 +124,13 @@ pub fn key(ctx: &mut Ctx, card: bool, auth_key: bool) -> CmdResult {
 /// the twelve-character check (a hash of the public key) to confirm over another channel.
 pub fn key_receive(ctx: &mut Ctx, from_words: bool) -> CmdResult {
     ctx.doctor_gate(false)?;
-    let words: Zeroizing<String> = if from_words {
+    let words: crate::term::SecretLine = if from_words {
         ctx.input
             .read_hidden("Receiving seed (24 words): ")?
             .ok_or_else(|| Fail::new(exit::ERROR, "no seed given"))?
     } else {
-        aska_core::xwing::new_seed_words()?
+        let fresh = aska_core::xwing::new_seed_words()?;
+        crate::term::SecretLine::from_text(&fresh)?
     };
     let relays: Vec<[u8; 32]> = ctx.relays.iter().map(|r| r.pubkey).collect();
     let rk = aska_core::xwing::receiving_key_from_words(&words, &relays, None, None)

@@ -5,10 +5,11 @@
 use crate::ctx::{exit, CmdResult, Ctx, Fail};
 use crate::files;
 use crate::handover;
+use crate::term::SecretLine;
 use aska_core::consts::{SizeClass, PTYPE_TEXT};
+use aska_core::secret::LockedBuf;
 use aska_core::session::{Level, Session, SessionError};
 use std::path::Path;
-use zeroize::{Zeroize, Zeroizing};
 
 pub struct SendOpts {
     pub guarded: bool,
@@ -25,21 +26,21 @@ pub struct SendOpts {
     pub to: Option<String>,
 }
 
-type Pair = Option<(Zeroizing<String>, Zeroizing<String>)>;
+type Pair = Option<(SecretLine, SecretLine)>;
 
-/// Everything the user types, in the two modes' orders (see `--help`).
+/// Everything the user types, in the two modes' orders (see `--help`), in locked memory.
 struct Inputs {
-    passphrase: Option<Zeroizing<String>>,
+    passphrase: Option<SecretLine>,
     decoy: Pair,
     distress: Pair,
-    note: Zeroizing<Vec<u8>>,
+    note: LockedBuf,
 }
 
-fn need(v: Option<Zeroizing<String>>, what: &str) -> Result<Zeroizing<String>, Fail> {
+fn need(v: Option<SecretLine>, what: &str) -> Result<SecretLine, Fail> {
     v.ok_or_else(|| Fail::new(exit::ERROR, format!("missing input: {what}")))
 }
 
-fn read_confirmed(ctx: &mut Ctx, what: &str) -> Result<Zeroizing<String>, Fail> {
+fn read_confirmed(ctx: &mut Ctx, what: &str) -> Result<SecretLine, Fail> {
     loop {
         let a = need(ctx.input.read_hidden(&format!("{what}: "))?, what)?;
         if a.is_empty() {
@@ -59,7 +60,7 @@ fn read_confirmed(ctx: &mut Ctx, what: &str) -> Result<Zeroizing<String>, Fail> 
 
 fn read_inputs(ctx: &mut Ctx, o: &SendOpts) -> Result<Inputs, Fail> {
     let interactive = ctx.input.is_interactive();
-    let mut note = Zeroizing::new(Vec::new());
+    let mut note = LockedBuf::with_capacity(1);
     if interactive {
         note = ctx.input.read_text_block(
             "Type the note. Finish with a line containing only a dot (.) or press Ctrl-D.\n",
@@ -181,11 +182,12 @@ pub fn run(ctx: &mut Ctx, o: &SendOpts, seal_out: Option<&Path>) -> CmdResult {
     if let Some(t) = &o.to {
         s.set_recipient(t)?;
     }
-    s.compose(&inputs.note, PTYPE_TEXT).map_err(|e| match e {
-        SessionError::TooLarge => too_large(inputs.note.len()),
-        e => e.into(),
-    })?;
-    inputs.note.zeroize();
+    s.compose(inputs.note.as_slice(), PTYPE_TEXT)
+        .map_err(|e| match e {
+            SessionError::TooLarge => too_large(inputs.note.len()),
+            e => e.into(),
+        })?;
+    inputs.note.clear();
     if let Some(p) = &inputs.passphrase {
         s.set_passphrase(Some(p))?;
     }

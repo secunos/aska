@@ -172,14 +172,10 @@ pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, bucket: Option<&Path>) -> CmdResult {
     // so asking afterwards would make the closing line differ between a distress and a decoy
     // open — a tell for anyone watching the screen (finding of the v0.6 design re-issue).
     let used_seed = s.has_receiving_seed();
-    let info = s
-        .open(pass.as_deref().map(|p| p.as_str()))
-        .map_err(|e| match e {
-            SessionError::NoSlot => {
-                Fail::new(exit::NOTHING, "Nothing opened with that passphrase.")
-            }
-            e => e.into(),
-        })?;
+    let info = s.open(pass.as_deref()).map_err(|e| match e {
+        SessionError::NoSlot => Fail::new(exit::NOTHING, "Nothing opened with that passphrase."),
+        e => e.into(),
+    })?;
     // Decoy, real and distress slots all pass through this same path with the same output
     // shape; nothing here looks at `info.distress`.
     let body: Zeroizing<String> = {

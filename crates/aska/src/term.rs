@@ -7,28 +7,127 @@
 //! when stdin carries data; and `--stdin`, where every input is a line of standard input in a
 //! documented order and no prompt is ever printed. Secrets never come from `argv` or the
 //! environment. The only `unsafe` in this crate is the termios and poll calls below, each a
-//! single libc call with a pointer to a local it outlives.
+//! single libc call with a pointer to a local it outlives, and the `dup(0)` that gives
+//! `--stdin` mode an unbuffered descriptor of its own.
+//!
+//! **No input buffer outlives the line it belongs to** (pre-review C-10, fixed in 1.1): bytes
+//! are read one at a time with `read(2)` straight into a fixed-capacity `LockedBuf` (pinned,
+//! excluded from dumps, zeroised on drop), never through `BufReader` or `io::Stdin`'s own
+//! 8 KiB buffer, which would keep every passphrase and every Key Card typed for the life of
+//! the process. A line longer than `LINE_CAP` bytes, or a note longer than `NOTE_CAP`, is an
+//! error rather than a reallocation.
 #![allow(unsafe_code)]
 
+use aska_core::secret::LockedBuf;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Read, Write};
-use std::os::fd::AsRawFd;
+use std::io::{self, Read, Write};
+use std::os::fd::{AsRawFd, FromRawFd};
 use std::time::{Duration, Instant};
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroize;
+use zeroize::Zeroizing;
 
-/// Read one line (without the newline) into zeroising memory. `Ok(None)` at EOF.
-fn read_line_z<R: BufRead>(r: &mut R) -> io::Result<Option<Zeroizing<String>>> {
-    let mut buf: Zeroizing<Vec<u8>> = Zeroizing::new(Vec::new());
-    let n = r.read_until(b'\n', &mut buf)?;
-    if n == 0 {
+/// Longest line accepted at any prompt (a Receiving Key with eight relay hints is ~2 400
+/// characters; a Key Card at most 1 023).
+pub const LINE_CAP: usize = 8 * 1024;
+/// Longest note accepted from the editor (the largest Block holds less than this).
+pub const NOTE_CAP: usize = 64 * 1024;
+
+/// One line of input, UTF-8, in locked memory. Derefs to `str` so callers treat it as text;
+/// zeroised when dropped.
+pub struct SecretLine(LockedBuf);
+
+impl SecretLine {
+    /// Copy text (e.g. a camera helper's output) into locked memory.
+    pub fn from_text(text: &str) -> io::Result<Self> {
+        if text.len() > LINE_CAP {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("input longer than {LINE_CAP} bytes"),
+            ));
+        }
+        let buf = LockedBuf::try_from_slice(text.as_bytes(), false).map_err(lock_error)?;
+        Ok(SecretLine(buf))
+    }
+
+    pub fn as_str(&self) -> &str {
+        // Validated UTF-8 at construction; the buffer is never mutated afterwards.
+        std::str::from_utf8(self.0.as_slice()).unwrap_or("")
+    }
+}
+
+impl std::ops::Deref for SecretLine {
+    type Target = str;
+    fn deref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl Zeroize for SecretLine {
+    fn zeroize(&mut self) {
+        self.0.clear();
+    }
+}
+
+/// Read one line (without the newline) byte by byte into a locked buffer of `cap` bytes.
+/// `Ok(None)` at EOF before any byte. `require_lock` refuses a buffer that could not be pinned.
+fn read_line_locked<R: Read>(
+    r: &mut R,
+    cap: usize,
+    require_lock: bool,
+) -> io::Result<Option<LockedBuf>> {
+    let mut buf = LockedBuf::try_with_capacity(cap, require_lock).map_err(lock_error)?;
+    let mut byte = [0u8; 1];
+    let mut any = false;
+    loop {
+        let n = match r.read(&mut byte) {
+            Ok(n) => n,
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e),
+        };
+        if n == 0 {
+            break;
+        }
+        any = true;
+        if byte[0] == b'\n' {
+            break;
+        }
+        if buf.len() == cap {
+            byte.zeroize();
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("input line longer than {cap} bytes"),
+            ));
+        }
+        buf.extend_from_slice(&byte);
+    }
+    byte.zeroize();
+    if !any {
         return Ok(None);
     }
-    while matches!(buf.last(), Some(b'\n') | Some(b'\r')) {
-        buf.pop();
+    // Strip a trailing CR (CRLF input); the LF was never stored.
+    while buf.as_slice().last() == Some(&b'\r') {
+        buf.truncate(buf.len() - 1);
     }
-    let s = String::from_utf8(buf.to_vec())
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "input is not UTF-8"))?;
-    Ok(Some(Zeroizing::new(s)))
+    Ok(Some(buf))
+}
+
+fn lock_error(e: aska_core::secret::LockError) -> io::Error {
+    io::Error::new(
+        io::ErrorKind::OutOfMemory,
+        format!(
+            "{e} for the input; re-run and accept the memory warning, or pass --accept-unlocked-memory"
+        ),
+    )
+}
+
+fn to_line(buf: LockedBuf) -> io::Result<SecretLine> {
+    if std::str::from_utf8(buf.as_slice()).is_err() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "input is not UTF-8",
+        ));
+    }
+    Ok(SecretLine(buf))
 }
 
 /// Restores the terminal attributes it was created from, even on early return or panic.
@@ -88,16 +187,22 @@ fn poll_readable(fd: i32, timeout: Duration) -> io::Result<bool> {
 /// The interactive terminal (`/dev/tty`), or the `--stdin` line protocol.
 pub enum Input {
     Tty(Tty),
-    Stdin(BufReader<io::Stdin>),
+    /// An unbuffered duplicate of descriptor 0 (never `io::stdin()`, which buffers 8 KiB).
+    Stdin(Stdin),
+}
+
+pub struct Stdin {
+    fd: File,
+    require_lock: bool,
 }
 
 pub struct Tty {
     dev: File,
-    reader: BufReader<File>,
     /// Idle deadline at prompts (review finding C-13): a prompt left unanswered for this
     /// long ends the command, so key material and passphrases do not sit in memory while the
     /// user is away. `None` = no limit.
     idle: Option<Duration>,
+    require_lock: bool,
 }
 
 impl Tty {
@@ -119,7 +224,17 @@ impl Input {
     /// `--stdin` if asked; otherwise `/dev/tty`, which fails when there is no terminal at all.
     pub fn open(stdin_mode: bool) -> io::Result<Self> {
         if stdin_mode {
-            return Ok(Input::Stdin(BufReader::new(io::stdin())));
+            // SAFETY: dup(0) returns a fresh descriptor we own exclusively (or -1).
+            let fd = unsafe { libc::dup(0) };
+            if fd < 0 {
+                return Err(io::Error::last_os_error());
+            }
+            // SAFETY: fd is a valid descriptor owned by nobody else.
+            let fd = unsafe { File::from_raw_fd(fd) };
+            return Ok(Input::Stdin(Stdin {
+                fd,
+                require_lock: false,
+            }));
         }
         let dev = File::options()
             .read(true)
@@ -131,12 +246,20 @@ impl Input {
                     "no interactive terminal (run from a terminal, or use --stdin for scripting)",
                 )
             })?;
-        let reader = BufReader::new(dev.try_clone()?);
         Ok(Input::Tty(Tty {
             dev,
-            reader,
             idle: None,
+            require_lock: false,
         }))
+    }
+
+    /// Whether input buffers must be pinned in RAM (set from the memory-lock decision: the
+    /// doctor's warning acknowledged, or `--accept-unlocked-memory`, makes this false).
+    pub fn set_require_lock(&mut self, require: bool) {
+        match self {
+            Input::Tty(t) => t.require_lock = require,
+            Input::Stdin(s) => s.require_lock = require,
+        }
     }
 
     /// Set the idle deadline for prompts (the Session's idle timeout; CLI `--idle`).
@@ -150,60 +273,77 @@ impl Input {
         matches!(self, Input::Tty(_))
     }
 
-    /// Prompt and read one line with echo. In `--stdin` mode the prompt is not printed.
-    pub fn read_line(&mut self, prompt: &str) -> io::Result<Option<Zeroizing<String>>> {
+    /// One raw line from the current source into a locked buffer of `cap` bytes.
+    fn raw_line(&mut self, cap: usize) -> io::Result<Option<LockedBuf>> {
         match self {
             Input::Tty(t) => {
-                t.dev.write_all(prompt.as_bytes())?;
-                t.dev.flush()?;
                 t.await_input()?;
-                read_line_z(&mut t.reader)
+                read_line_locked(&mut t.dev, cap, t.require_lock)
             }
-            Input::Stdin(r) => read_line_z(r),
+            Input::Stdin(s) => read_line_locked(&mut s.fd, cap, s.require_lock),
         }
+    }
+
+    /// Prompt and read one line with echo. In `--stdin` mode the prompt is not printed.
+    pub fn read_line(&mut self, prompt: &str) -> io::Result<Option<SecretLine>> {
+        if let Input::Tty(t) = self {
+            t.dev.write_all(prompt.as_bytes())?;
+            t.dev.flush()?;
+        }
+        self.raw_line(LINE_CAP)?.map(to_line).transpose()
     }
 
     /// Prompt and read one line with echo OFF (passphrases). The newline is echoed so the
     /// cursor moves on. In `--stdin` mode this is an ordinary line.
-    pub fn read_hidden(&mut self, prompt: &str) -> io::Result<Option<Zeroizing<String>>> {
+    pub fn read_hidden(&mut self, prompt: &str) -> io::Result<Option<SecretLine>> {
         match self {
             Input::Tty(t) => {
                 t.dev.write_all(prompt.as_bytes())?;
                 t.dev.flush()?;
                 let g = TermiosGuard::new(t.dev.as_raw_fd())?;
                 g.apply(|a| a.c_lflag &= !libc::ECHO)?;
-                let r = t.await_input().and_then(|()| read_line_z(&mut t.reader));
+                let r = t
+                    .await_input()
+                    .and_then(|()| read_line_locked(&mut t.dev, LINE_CAP, t.require_lock));
                 drop(g);
                 t.dev.write_all(b"\n")?;
-                r
+                r?.map(to_line).transpose()
             }
-            Input::Stdin(r) => read_line_z(r),
+            Input::Stdin(_) => self.read_line(""),
         }
     }
 
-    /// Read lines until EOF or a line that is a single `.`; returns them joined with `\n`.
-    /// In `--stdin` mode the terminator is EOF only (a note may legitimately contain a `.`).
-    pub fn read_text_block(&mut self, prompt: &str) -> io::Result<Zeroizing<Vec<u8>>> {
-        let mut out: Zeroizing<Vec<u8>> = Zeroizing::new(Vec::new());
+    /// Read lines until EOF or a line that is a single `.`; returns them joined with `\n` in
+    /// one locked buffer. In `--stdin` mode the terminator is EOF only (a note may legitimately
+    /// contain a `.`).
+    pub fn read_text_block(&mut self, prompt: &str) -> io::Result<LockedBuf> {
+        let require = match self {
+            Input::Tty(t) => t.require_lock,
+            Input::Stdin(s) => s.require_lock,
+        };
+        let mut out = LockedBuf::try_with_capacity(NOTE_CAP, require).map_err(lock_error)?;
         if let Input::Tty(t) = self {
             t.dev.write_all(prompt.as_bytes())?;
             t.dev.flush()?;
         }
         loop {
-            let line = match self {
-                Input::Tty(t) => read_line_z(&mut t.reader)?,
-                Input::Stdin(r) => read_line_z(r)?,
+            let Some(line) = self.raw_line(LINE_CAP)? else {
+                break;
             };
-            let Some(mut line) = line else { break };
-            if self.is_interactive() && line.as_str() == "." {
-                line.zeroize();
+            if self.is_interactive() && line.as_slice() == b"." {
                 break;
             }
-            if !out.is_empty() {
-                out.push(b'\n');
+            let extra = line.len() + usize::from(!out.is_empty());
+            if out.len() + extra > NOTE_CAP {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("the note is longer than {NOTE_CAP} bytes"),
+                ));
             }
-            out.extend_from_slice(line.as_bytes());
-            line.zeroize();
+            if !out.is_empty() {
+                out.extend_from_slice(b"\n");
+            }
+            out.extend_from_slice(line.as_slice());
         }
         Ok(out)
     }
@@ -344,24 +484,47 @@ mod tests {
     use super::*;
 
     #[test]
-    fn stdin_mode_reads_lines_and_text_blocks() {
+    fn lines_are_read_unbuffered_into_locked_memory() {
         let data = b"first\nsecond line\r\n\nrest of\nnote.\n";
-        let mut inp = Input::Stdin(BufReader::new(io::stdin()));
-        // Replace the reader with our data via a cursor-backed BufReader through the same API.
-        let mut cur = BufReader::new(&data[..]);
-        assert_eq!(read_line_z(&mut cur).unwrap().unwrap().as_str(), "first");
+        let mut cur = &data[..];
+        let l = read_line_locked(&mut cur, LINE_CAP, false)
+            .unwrap()
+            .unwrap();
+        assert_eq!(l.as_slice(), b"first");
+        assert!(l.capacity() >= LINE_CAP, "{}", l.capacity());
+        let l = read_line_locked(&mut cur, LINE_CAP, false)
+            .unwrap()
+            .unwrap();
+        assert_eq!(l.as_slice(), b"second line");
+        let l = read_line_locked(&mut cur, LINE_CAP, false)
+            .unwrap()
+            .unwrap();
+        assert_eq!(l.as_slice(), b"");
+        // The reader consumed exactly the lines read: nothing is buffered ahead.
+        assert_eq!(cur, b"rest of\nnote.\n");
+        // A line at the cap is refused instead of growing.
+        let long = [b'a'; 20];
+        let mut c = &long[..];
+        assert!(read_line_locked(&mut c, 16, false).is_err());
+        // Non-UTF-8 is refused.
+        let mut c = &b"\xff\xfe\n"[..];
+        assert!(to_line(read_line_locked(&mut c, 16, false).unwrap().unwrap()).is_err());
+        // EOF before any byte is None; a final line without a newline is a line.
+        let mut c = &b""[..];
+        assert!(read_line_locked(&mut c, 16, false).unwrap().is_none());
+        let mut c = &b"tail"[..];
         assert_eq!(
-            read_line_z(&mut cur).unwrap().unwrap().as_str(),
-            "second line"
+            read_line_locked(&mut c, 16, false)
+                .unwrap()
+                .unwrap()
+                .as_slice(),
+            b"tail"
         );
-        assert_eq!(read_line_z(&mut cur).unwrap().unwrap().as_str(), "");
-        // In stdin mode a lone "." is NOT a terminator.
-        let mut cur2 = BufReader::new(&b"a\n.\nb\n"[..]);
-        let mut acc = Vec::new();
-        while let Some(l) = read_line_z(&mut cur2).unwrap() {
-            acc.push(l.as_str().to_string());
-        }
-        assert_eq!(acc, ["a", ".", "b"]);
+    }
+
+    #[test]
+    fn stdin_mode_has_no_terminator_and_wait_key_returns_at_once() {
+        let mut inp = Input::open(true).unwrap();
         assert!(inp.wait_key(Duration::from_secs(1)).unwrap());
         assert!(!inp.is_interactive());
     }

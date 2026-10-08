@@ -39,7 +39,9 @@ RELAY=$!
 python3 scripts/fake_socks.py --target 127.0.0.1:$RELAY_PORT --port 9050 >/dev/null 2>&1 &
 SOCKS=$!
 cleanup() {
-  { pkill -P $$; kill $RELAY $SOCKS ${XVFB_PID:-}; wait; } >/dev/null 2>&1 || true
+  # The traced GUI ignores SIGTERM while strace holds it; end the tracee itself (KILL), then
+  # strace exits on its own — otherwise `wait` hangs when DISPLAY was preset (no Xvfb to kill).
+  { pkill -KILL -f "^$BIN\$"; pkill -P $$; kill $RELAY $SOCKS ${XVFB_PID:-}; wait; } >/dev/null 2>&1 || true
   rm -rf "$GATEHOME" "$LOG"
 }
 trap cleanup EXIT

@@ -137,6 +137,8 @@ impl Ctx {
     pub fn build(g: Globals) -> Result<Self, Fail> {
         let mut input = Input::open(g.stdin)?;
         input.set_idle(Duration::from_secs(g.idle.max(30)));
+        // Input buffers follow the same memory-lock rule as the Session's secrets (C-10).
+        input.set_require_lock(!g.accept_unlocked_memory);
         // Tor Browser's Tor is a fine system Tor for Aska — and the one a user who had to
         // connect through a bridge already has running (D-16, option A).
         let default_socks = aska_core::platform::default_socks().to_string();
@@ -157,7 +159,7 @@ impl Ctx {
             let pw = input
                 .read_hidden("Tor control-port password: ")?
                 .ok_or_else(|| Fail::new(exit::ERROR, "no control password given"))?;
-            ControlAuth::Password(pw)
+            ControlAuth::Password(Zeroizing::new(pw.as_str().to_owned()))
         } else {
             ControlAuth::None
         };
@@ -298,6 +300,7 @@ impl Ctx {
             self.warned = true;
             if memlock {
                 self.accept_unlocked = true;
+                self.input.set_require_lock(false);
             }
         }
         Ok(())
@@ -361,12 +364,14 @@ impl Ctx {
     }
 
     /// Read a line of key material or a `scan` request; `Ok(None)` on an empty line / EOF.
-    pub fn read_material(&mut self, prompt: &str) -> Result<Option<Zeroizing<String>>, Fail> {
+    pub fn read_material(&mut self, prompt: &str) -> Result<Option<term::SecretLine>, Fail> {
         let line = self.input.read_line(prompt)?;
         match line {
             None => Ok(None),
             Some(l) if l.trim().is_empty() => Ok(None),
-            Some(l) if l.trim() == "scan" && self.input.is_interactive() => Ok(Some(self.scan()?)),
+            Some(l) if l.trim() == "scan" && self.input.is_interactive() => {
+                Ok(Some(term::SecretLine::from_text(&self.scan()?)?))
+            }
             Some(l) => Ok(Some(l)),
         }
     }
