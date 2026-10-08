@@ -1,0 +1,19 @@
+[package]
+name = "aska-scan"
+description = "Aska in-process QR scanning: V4L2 camera capture (no C library) and a pure-Rust decoder"
+license = "MIT OR Apache-2.0"
+version.workspace = true
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+libc.workspace = true
+zeroize.workspace = true
+# Pure-Rust QR decoder (no `image`, no C): works on a greyscale buffer.
+rqrr = { version = "0.9", default-features = false }
+
+[dev-dependencies]
+qrcode.workspace = true

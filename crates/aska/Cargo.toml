@@ -11,6 +11,7 @@ repository.workspace = true
 
 [dependencies]
 aska-core = { path = "../aska-core" }
+aska-scan = { path = "../aska-scan" }
 aska-proto = { path = "../aska-proto" }
 clap.workspace = true
 zeroize.workspace = true

@@ -27,7 +27,7 @@ This guide tells you what you need, how to check that the copy you have is the r
 | Libraries (graphical client) | `libgtk-4-1` (GTK ≥ 4.14) and `libadwaita-1-0` (≥ 1.5). On Debian/Ubuntu: `sudo apt install libgtk-4-1 libadwaita-1-0`. Tails 7 has them. The command-line client needs nothing. |
 | Tor | A Tor running on your computer. Either the system `tor` package (`sudo apt install tor`, it listens on port 9050) or Tor Browser (its Tor listens on port 9150 while the browser is open). Tails and Whonix provide Tor already. |
 | A relay | The `.onion` address of an Aska relay. Your circle runs one or knows one (the Relay Operator Guide explains how to run one). Aska ships with no relay built in. |
-| Optional: a camera | To read Key Card QR codes from another screen or from paper. Aska uses the `zbarcam` helper from the `zbar-tools` package. Pasting or typing works without it. |
+| Optional: a camera | To read Key Card QR codes from another screen or from paper. Since 1.1 Aska reads the camera itself (a webcam that offers an uncompressed picture, which nearly all do); on Debian and Ubuntu your user must be in the `video` group (`sudo usermod -aG video $USER`, then log out and in). If no camera can be read that way, Aska falls back to the `zbarcam` helper from `zbar-tools` when it is installed. Pasting or typing works without any camera. |
 | Not swap | Swap should be off, or Aska will warn at every start that a note *could* reach the disk. Section 3.4 shows how. Tails has no swap. |
 
 Aska never needs root. It installs into your own home folder and can be removed by deleting a handful of files there (section 12).
@@ -174,7 +174,7 @@ What you must *not* do: save the Key Card to a file, send it over the same chann
 
 Press **Receive a note**.
 
-**Key material.** Paste or type the Key Card (`aska1…`), the 24 words, or Shares one at a time (**Add** after each; the screen says "Share accepted — 1 of 2 (need more)" until enough have arrived and the key is reconstructed on this device). **Scan with camera…** starts the camera helper to read a QR code.
+**Key material.** Paste or type the Key Card (`aska1…`), the 24 words, or Shares one at a time (**Add** after each; the screen says "Share accepted — 1 of 2 (need more)" until enough have arrived and the key is reconstructed on this device). **Scan with camera…** opens a small viewfinder and reads the QR code in Aska itself (nothing is saved; the picture is wiped as soon as the code is read); if no camera can be read, it tries the `zbarcam` helper.
 
 **Relays.** Needed only when the key material names no relay — words and Shares never do, a Key Card usually does.
 

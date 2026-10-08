@@ -5,8 +5,10 @@
 //! View screen — or "Nothing found", which does not say whether the note is not posted yet
 //! or the drop has expired. The same screen serves `Shares → Combine` (`shares_only`).
 //!
-//! Camera: v1 drives the same external helper as the CLI (`zbarcam`, printing the decoded
-//! text), started on a worker; the desktop-portal camera (C-04) is platform work for M6.
+//! Camera (1.1, C-04): the QR code is read in-process by `aska-scan` — frames come from the
+//! camera straight into this process, are shown in a viewfinder dialog and wiped; nothing
+//! is written anywhere. Only when no camera can be read that way does the same external
+//! helper as the CLI (`zbarcam`, printing the decoded text) run on a worker, as in 1.0.
 
 use super::keypad::PassphraseField;
 use super::{body, heading, hint, pill, view, Ui};
@@ -16,11 +18,33 @@ use crate::worker;
 use adw::prelude::*;
 use aska_core::drop::{FetchOutcome, Relay};
 use aska_core::session::{KeyStatus, OpenInfo, Session, SessionError};
+use aska_scan::{Preview, ScanError};
+use gtk::{gdk, glib};
+use std::cell::Cell;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc};
+use std::time::Duration;
 use zeroize::{Zeroize, Zeroizing};
 
 /// The camera helper (the CLI's default `--scan-cmd`): prints one decoded QR and exits.
+/// The fallback for cameras `aska-scan` cannot read (compressed-only formats, no device).
 const SCAN_CMD: &str = "zbarcam --raw --oneshot -Sdisable -Sqrcode.enable";
+
+/// Longest side of the viewfinder frames the scanning thread hands over.
+const PREVIEW_SIZE: u32 = 320;
+
+/// Give up on the in-process scan after this long without a decode.
+const SCAN_TIMEOUT: Duration = Duration::from_secs(90);
+
+/// How often the main loop looks for a new viewfinder frame (older ones are dropped).
+const PREVIEW_POLL: Duration = Duration::from_millis(66);
+
+/// What the scanning thread sends to the main loop.
+enum ScanMsg {
+    Frame(Preview),
+    Done(Result<Zeroizing<String>, ScanError>),
+}
 
 #[derive(Clone)]
 struct Form {
@@ -478,8 +502,183 @@ fn add_material(ui: &Rc<Ui>, f: &Form, text: &str) {
     }
 }
 
-/// Run the camera helper on a worker and feed what it decoded.
+/// Scan in-process with a viewfinder dialog: `aska_scan::scan` runs on its own thread with
+/// the dialog's Cancel (or closing it) as the cancel flag; preview frames reach the main loop
+/// through a channel that is polled every `PREVIEW_POLL`, keeping only the newest frame. A
+/// decode feeds `add_material` as the helper path does; no readable camera hands over to the
+/// helper (`scan_helper`); a timeout or a cancel just closes the dialog.
+///
+/// Frames show the Key Card: the picture holds one texture at a time (each replaces the
+/// last), every luma buffer is zeroising and dropped once converted, and the paintable is
+/// dropped when the dialog closes, so nothing of a frame outlives the dialog.
 fn scan_camera(ui: &Rc<Ui>, f: &Form) {
+    f.error.set_label("");
+    f.scan.set_sensitive(false);
+
+    let cancel = Arc::new(AtomicBool::new(false));
+    let (tx, rx) = mpsc::channel::<ScanMsg>();
+    {
+        let cancel = cancel.clone();
+        // 2 MiB stack, as `worker::run` (decoding a full frame is deep enough to matter).
+        let _ = std::thread::Builder::new()
+            .stack_size(2 * 1024 * 1024)
+            .spawn(move || {
+                let opts = aska_scan::ScanOptions {
+                    device: None,
+                    timeout: SCAN_TIMEOUT,
+                    cancel,
+                    preview_size: PREVIEW_SIZE,
+                };
+                let frames = tx.clone();
+                let r = aska_scan::scan(&opts, move |p| {
+                    // A frame nobody receives any more comes back in the error and is wiped.
+                    let _ = frames.send(ScanMsg::Frame(p));
+                });
+                let _ = tx.send(ScanMsg::Done(r));
+            });
+    }
+
+    // ---- The viewfinder dialog ----
+    let dialog = adw::Dialog::builder()
+        .title(tr("receive.scan.title"))
+        .content_width(380)
+        .build();
+    let tv = adw::ToolbarView::new();
+    tv.add_top_bar(&adw::HeaderBar::new());
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(12)
+        .margin_top(6)
+        .margin_bottom(18)
+        .margin_start(18)
+        .margin_end(18)
+        .build();
+    let picture = gtk::Picture::builder()
+        .content_fit(gtk::ContentFit::Contain)
+        .width_request(320)
+        .height_request(240)
+        .halign(gtk::Align::Center)
+        .css_classes(["card"])
+        .build();
+    content.append(&picture);
+    let status = gtk::Label::builder()
+        .label(tr("receive.scan.point"))
+        .wrap(true)
+        .xalign(0.0)
+        .css_classes(["dim-label"])
+        .build();
+    content.append(&status);
+    let cancel_btn = gtk::Button::builder()
+        .label(tr("common.cancel"))
+        .halign(gtk::Align::End)
+        .build();
+    content.append(&cancel_btn);
+    tv.set_content(Some(&content));
+    dialog.set_child(Some(&tv));
+
+    // Set once the dialog is gone (by the user or by an outcome): the poll then only drains
+    // the channel. `handed_over` keeps the Scan button off while the helper runs instead.
+    let closed = Rc::new(Cell::new(false));
+    let handed_over = Rc::new(Cell::new(false));
+    {
+        let dialog = dialog.clone();
+        cancel_btn.connect_clicked(move |_| {
+            dialog.close();
+        });
+    }
+    {
+        let (cancel, closed, handed_over, picture, f) = (
+            cancel.clone(),
+            closed.clone(),
+            handed_over.clone(),
+            picture.clone(),
+            f.clone(),
+        );
+        dialog.connect_closed(move |_| {
+            cancel.store(true, Ordering::Relaxed);
+            closed.set(true);
+            picture.set_paintable(None::<&gdk::Paintable>);
+            if !handed_over.get() {
+                f.scan.set_sensitive(true);
+            }
+        });
+    }
+    dialog.present(ui.window().as_ref());
+
+    let (ui, f) = (ui.clone(), f.clone());
+    glib::timeout_add_local(PREVIEW_POLL, move || {
+        let mut latest: Option<Preview> = None;
+        let mut done: Option<Result<Zeroizing<String>, ScanError>> = None;
+        loop {
+            match rx.try_recv() {
+                // An older frame is replaced here and wiped as it drops.
+                Ok(ScanMsg::Frame(p)) => latest = Some(p),
+                Ok(ScanMsg::Done(r)) => {
+                    done = Some(r);
+                    break;
+                }
+                Err(mpsc::TryRecvError::Empty) => break,
+                // The thread went away without a verdict: treat it as "no camera read".
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    done = Some(Err(ScanError::NoCamera("scan thread ended".into())));
+                    break;
+                }
+            }
+        }
+        if let Some(p) = latest {
+            if !closed.get() {
+                show_frame(&picture, p);
+            }
+        }
+        let Some(r) = done else {
+            return glib::ControlFlow::Continue;
+        };
+        if closed.get() {
+            // Cancelled by the user; whatever came back is dropped (and wiped) unread.
+            return glib::ControlFlow::Break;
+        }
+        closed.set(true);
+        match r {
+            Ok(text) => {
+                dialog.close();
+                add_material(&ui, &f, &text);
+            }
+            Err(ScanError::NoCamera(_)) => {
+                handed_over.set(true);
+                dialog.close();
+                scan_helper(&ui, &f);
+            }
+            Err(ScanError::Timeout) => {
+                dialog.close();
+                f.status.set_label(&tr("receive.scan.timeout"));
+            }
+            Err(ScanError::Cancelled) => {
+                dialog.close();
+            }
+            Err(e @ ScanError::Io(_)) => {
+                dialog.close();
+                fail(&f, &e.to_string());
+            }
+        }
+        glib::ControlFlow::Break
+    });
+}
+
+/// Put one greyscale frame on the viewfinder; the previous texture is released by the
+/// picture, the luma buffer lives on inside the texture's bytes and is wiped when that goes.
+fn show_frame(picture: &gtk::Picture, p: Preview) {
+    let (w, h) = (p.width as usize, p.height as usize);
+    if w == 0 || h == 0 || p.luma.len() < w * h || w > i32::MAX as usize || h > i32::MAX as usize {
+        return;
+    }
+    let bytes = glib::Bytes::from_owned(p.luma);
+    let tex = gdk::MemoryTexture::new(w as i32, h as i32, gdk::MemoryFormat::G8, &bytes, w);
+    picture.set_paintable(Some(&tex));
+}
+
+/// Run the camera helper on a worker and feed what it decoded (the fallback when no camera
+/// could be read in-process).
+fn scan_helper(ui: &Rc<Ui>, f: &Form) {
     f.error.set_label("");
     f.scan.set_sensitive(false);
     f.status.set_label(&tr("receive.scan.running"));
@@ -493,6 +692,9 @@ fn scan_camera(ui: &Rc<Ui>, f: &Form) {
                 .stderr(std::process::Stdio::null())
                 .output();
             match out {
+                // The helper runs through `sh -c`: a helper that is not installed is the
+                // shell's exit 127 ("command not found"), not a failure to start.
+                Ok(o) if o.status.code() == Some(127) => Err("helper not found".to_string()),
                 Ok(o) => {
                     let mut text = Zeroizing::new(String::from_utf8_lossy(&o.stdout).into_owned());
                     let first: Zeroizing<String> =

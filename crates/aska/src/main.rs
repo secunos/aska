@@ -110,7 +110,8 @@ struct GlobalArgs {
     /// Idle timeout in seconds before the Session closes itself
     #[arg(long, global = true, default_value_t = 300)]
     idle: u64,
-    /// Camera helper: a command that prints the decoded QR text on stdout
+    /// Camera helper, used only when no camera can be read in-process (or always, with
+    /// --scan-helper): a command that prints the decoded QR text on stdout
     #[arg(
         long,
         global = true,
@@ -118,6 +119,9 @@ struct GlobalArgs {
         value_name = "CMD"
     )]
     scan_cmd: String,
+    /// Scan with the external helper instead of the in-process camera reader
+    #[arg(long, global = true)]
+    scan_helper: bool,
     /// Scripting mode: all inputs from standard input in the documented order; no prompts
     #[arg(long, global = true)]
     stdin: bool,
@@ -423,6 +427,7 @@ fn run(cli: Cli) -> Result<i32, Fail> {
         qr: g.qr,
         idle: g.idle,
         scan_cmd: g.scan_cmd,
+        scan_helper: g.scan_helper,
         stdin: g.stdin,
         tor_browser: g.tor_browser,
     })?;

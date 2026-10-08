@@ -93,6 +93,7 @@ pub struct Ctx {
     pub qr: QrStyle,
     pub idle: Duration,
     pub scan_cmd: String,
+    pub scan_helper: bool,
     pub input: Input,
     /// Set once doctor warnings were acknowledged; turns exit 0 into exit 2.
     pub warned: bool,
@@ -114,6 +115,7 @@ pub struct Globals {
     pub qr: Option<QrStyle>,
     pub idle: u64,
     pub scan_cmd: String,
+    pub scan_helper: bool,
     pub stdin: bool,
     /// Use Tor Browser's Tor (SOCKS 127.0.0.1:9150) instead of the system Tor.
     pub tor_browser: bool,
@@ -215,6 +217,7 @@ impl Ctx {
             qr,
             idle: Duration::from_secs(g.idle.max(30)),
             scan_cmd: g.scan_cmd,
+            scan_helper: g.scan_helper,
             input,
             warned: false,
             profile_seeds,
@@ -390,6 +393,18 @@ impl Ctx {
 
     /// Run the camera helper and return the first line it prints (the decoded QR text).
     pub fn scan(&mut self) -> Result<Zeroizing<String>, Fail> {
+        if !self.scan_helper {
+            // In-process first (1.1, C-04): frames stay in this process and are wiped.
+            note!("Scanning with the camera — show the QR code to it (up to 90 s; Ctrl-C stops) …");
+            let opts = aska_scan::ScanOptions::default();
+            match aska_scan::scan(&opts, |_| {}) {
+                Ok(text) => return Ok(text),
+                Err(aska_scan::ScanError::NoCamera(why)) => {
+                    note!("No camera could be read in-process ({why}); trying the helper.");
+                }
+                Err(e) => return Err(Fail::new(exit::ERROR, e.to_string())),
+            }
+        }
         note!(
             "Starting the camera helper ({}) — show the QR code to the camera …",
             self.scan_cmd

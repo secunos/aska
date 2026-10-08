@@ -36,7 +36,8 @@ Plan: `docs/Aska_Prototype_Plan_v0.1.md`.
 | `crates/aska-proto` | ADP/1 wire format, PoW, optional async client (`--features client`) | MIT OR Apache-2.0 | **M2 done** |
 | `crates/aska` | command-line client: every Table 3 command, terminal QR, split mode, encrypted profile | MIT OR Apache-2.0 | **M4 code done** (owner's Tor gate pending) |
 | `crates/aska-gui` | GTK4 / libadwaita graphical client: Home, Send, Hand-over, Receive, View, Settings, Shares, Receiving key | MIT OR Apache-2.0 | **M5 + M5c code done** |
-| `crates/aska-drop` | Dead Drop relay: RAM-only store, PoW, no logs, mlock | AGPL-3.0 | **M2 done** (droplet soak pending) |
+| `crates/aska-drop` | Dead Drop relay: RAM-only store, PoW, no logs, mlock | AGPL-3.0 | **M2 done** |
+| `crates/aska-scan` | in-process QR scanning: V4L2 camera capture through `libc` only, pure-Rust decoder (`rqrr`); frames wiped | MIT OR Apache-2.0 | **1.1** |
 
 ## Running it yourself (Debian 12/13 or Ubuntu 24.04+ in VirtualBox)
 
@@ -148,7 +149,7 @@ Global options: `--relay ONION` (repeatable), `--profile FILE`, `--socks HOST:PO
 `--control HOST:PORT` with `--control-cookie FILE` or
 `--control-password` (only for circle-key relays), `-y/--yes` (acknowledge doctor warnings; a
 success then exits 2), `--accept-unlocked-memory`, `--qr half|ascii|none`, `--idle SECONDS`,
-`--scan-cmd CMD` (camera helper; default uses `zbarcam` from zbar-tools), `--fast` (skip the
+`--scan-cmd CMD` (camera helper, used when no camera can be read in-process; default `zbarcam` from zbar-tools), `--scan-helper` (always use the helper), `--fast` (skip the
 0–90 s cover delay; tests only), `--stdin` (scripting: every input from standard input, no
 prompts — the order is in `aska --help`).
 
@@ -206,8 +207,9 @@ Design §5 plus Shares:
 - **Hand-over** — the Key Card as a QR drawn by the app, the 24 words, the CLI-14 banner, "Done —
   forget the key" with the five-minute countdown; Guarded shows one Share at a time.
 - **Receive** — paste or type a Key Card, the 24 words or Shares one at a time ("Share accepted —
-  1 of 2"), or scan with the camera (v1 drives the same external `zbarcam` helper as the CLI; the
-  desktop-portal camera, C-04, is M6 platform work); relays as a fallback for key material that
+  1 of 2"), or scan with the camera (since 1.1 in-process: `aska-scan` reads the camera through
+  V4L2 and decodes the QR code itself, with a viewfinder; the `zbarcam` helper is the fallback
+  when no camera can be read, e.g. one that offers only MJPEG); relays as a fallback for key material that
   names none; the passphrase on the in-app keypad; **Check the drop** fetches the whole bucket from
   every relay on a worker thread, matches locally, opens across the KDF profiles and shows the
   note — or "Nothing found — the note may not be posted yet, or the drop may have expired".
