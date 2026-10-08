@@ -1305,7 +1305,9 @@ impl Session {
             return Err(SessionError::NoRelays);
         }
         let relays = self.prepare_relays(&relays)?;
-        let classes: Vec<u8> = match self.key_class {
+        // The Key Card's class if it names one; otherwise the caller's `size_class` (the CLI's
+        // `receive --class`, for words and Shares, which carry no class); otherwise all three.
+        let classes: Vec<u8> = match self.key_class.or(self.cfg.size_class) {
             Some(c) => vec![c as u8],
             None => vec![1, 2, 3],
         };
@@ -1559,6 +1561,11 @@ impl Session {
         self.label = None;
         self.key_relays.clear();
         self.key_class = None;
+        // Circle client-authorisation keys held in the configuration are secrets too; drop them
+        // with everything else rather than leaving them until the Session is dropped (C-15).
+        for r in self.cfg.relays.iter_mut() {
+            r.auth_key = None;
+        }
         self.state = State::Closed;
         scrub_stack();
     }

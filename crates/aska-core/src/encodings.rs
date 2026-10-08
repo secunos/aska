@@ -113,12 +113,17 @@ impl KeyCard {
         out
     }
 
+    /// Strict decoder (Block Format §7.3, Table 5; pre-review B-7, tightened in 1.1): the
+    /// version element must come first and be exactly `[FORMAT_VERSION]`; the root, class,
+    /// TTL and auth elements appear at most once with exactly their defined lengths; relays
+    /// are repeatable; unknown types are skipped; anything else is `Encoding`.
     pub fn from_bytes(b: &[u8]) -> Result<Self, Error> {
         let mut i = 0;
         let mut root: Option<Zeroizing<[u8; 32]>> = None;
         let mut relays = Vec::new();
         let (mut sc, mut ttl) = (None, None);
         let mut auth: Option<Zeroizing<[u8; 32]>> = None;
+        let mut first = true;
         while i < b.len() {
             if i + 2 > b.len() {
                 return Err(Error::Encoding);
@@ -126,32 +131,41 @@ impl KeyCard {
             let (t, l) = (b[i], b[i + 1] as usize);
             let v = b.get(i + 2..i + 2 + l).ok_or(Error::Encoding)?;
             i += 2 + l;
+            if first {
+                // The version element MUST be first (and is therefore the only place it may be).
+                if t != TLV_VERSION {
+                    return Err(Error::Encoding);
+                }
+                if v != [FORMAT_VERSION] {
+                    return Err(Error::Version);
+                }
+                first = false;
+                continue;
+            }
             match t {
-                TLV_VERSION if v != [FORMAT_VERSION] => return Err(Error::Version),
-                TLV_VERSION => {}
+                TLV_VERSION => return Err(Error::Encoding),
+                TLV_ROOT if root.is_some() => return Err(Error::Encoding),
                 TLV_ROOT => {
                     root = Some(Zeroizing::new(
                         <[u8; 32]>::try_from(v).map_err(|_| Error::Encoding)?,
                     ))
                 }
                 TLV_RELAY => relays.push(<[u8; 32]>::try_from(v).map_err(|_| Error::Encoding)?),
-                TLV_CLASS => {
-                    sc = Some(
-                        SizeClass::from_u8(*v.first().ok_or(Error::Encoding)?)
-                            .ok_or(Error::Encoding)?,
-                    )
-                }
+                TLV_CLASS if sc.is_some() || v.len() != 1 => return Err(Error::Encoding),
+                TLV_CLASS => sc = Some(SizeClass::from_u8(v[0]).ok_or(Error::Encoding)?),
+                TLV_TTL if ttl.is_some() => return Err(Error::Encoding),
                 TLV_TTL => {
                     ttl = Some(u16::from_be_bytes(
                         <[u8; 2]>::try_from(v).map_err(|_| Error::Encoding)?,
                     ))
                 }
+                TLV_AUTH if auth.is_some() => return Err(Error::Encoding),
                 TLV_AUTH => {
                     auth = Some(Zeroizing::new(
                         <[u8; 32]>::try_from(v).map_err(|_| Error::Encoding)?,
                     ))
                 }
-                _ => {} // unknown types are skipped (§7.3)
+                _ => {} // unknown types are skipped (§7.3: "Decoders MUST skip unknown types")
             }
         }
         let root = root.ok_or(Error::Encoding)?;
@@ -520,5 +534,123 @@ mod receiving_key_tests {
             ReceivingKey::check_of_text(&text).unwrap(),
             ReceivingKey::check_of_text(&text.to_ascii_uppercase()).unwrap()
         );
+    }
+}
+
+#[cfg(test)]
+mod keycard_strictness_tests {
+    //! Block Format §7.3 Table 5 as normative text (pre-review B-7, tightened in 1.1).
+    use super::*;
+
+    fn card() -> KeyCard {
+        let mut c = KeyCard::new(Root::from_slice(&[0x11; 32]));
+        c.relays.push([0x22; 32]);
+        c.size_class = Some(SizeClass::C2);
+        c.ttl_hours = Some(48);
+        c.auth_key = Some([0x33; 32]);
+        c
+    }
+
+    fn tlv(t: u8, v: &[u8]) -> Vec<u8> {
+        let mut o = vec![t, v.len() as u8];
+        o.extend_from_slice(v);
+        o
+    }
+
+    #[test]
+    fn canonical_encoding_round_trips_and_is_accepted() {
+        let c = card();
+        let b = c.to_bytes();
+        let d = KeyCard::from_bytes(&b).unwrap();
+        assert_eq!(d.to_bytes(), b);
+        assert_eq!(d.relays, c.relays);
+        assert_eq!(d.size_class, c.size_class);
+        assert_eq!(d.ttl_hours, c.ttl_hours);
+        assert_eq!(d.auth_key, c.auth_key);
+    }
+
+    #[test]
+    fn version_must_be_first_and_single() {
+        let b = card().to_bytes();
+        // No version element at all.
+        assert!(KeyCard::from_bytes(&b[3..]).is_err());
+        // Version after the root.
+        let mut swapped = b[3..37].to_vec();
+        swapped.extend_from_slice(&b[..3]);
+        swapped.extend_from_slice(&b[37..]);
+        assert!(KeyCard::from_bytes(&swapped).is_err());
+        // Two version elements.
+        let mut twice = b[..3].to_vec();
+        twice.extend_from_slice(&b);
+        assert!(KeyCard::from_bytes(&twice).is_err());
+        // Wrong version value, and wrong version lengths.
+        let mut bad = b.clone();
+        bad[2] = 9;
+        assert!(matches!(KeyCard::from_bytes(&bad), Err(Error::Version)));
+        let mut long = tlv(TLV_VERSION, &[FORMAT_VERSION, 0]);
+        long.extend_from_slice(&b[3..]);
+        assert!(KeyCard::from_bytes(&long).is_err());
+    }
+
+    #[test]
+    fn duplicates_and_wrong_lengths_are_rejected() {
+        let b = card().to_bytes();
+        for extra in [
+            tlv(TLV_ROOT, &[0x44; 32]),
+            tlv(TLV_CLASS, &[1]),
+            tlv(TLV_TTL, &[0, 24]),
+            tlv(TLV_AUTH, &[0x55; 32]),
+        ] {
+            let mut dup = b.clone();
+            dup.extend_from_slice(&extra);
+            assert!(
+                KeyCard::from_bytes(&dup).is_err(),
+                "duplicate {:#x}",
+                extra[0]
+            );
+        }
+        let base = {
+            let mut c = KeyCard::new(Root::from_slice(&[0x11; 32]));
+            c.relays.clear();
+            c.to_bytes()
+        };
+        for (t, v) in [
+            (TLV_CLASS, vec![2u8, 0]),
+            (TLV_CLASS, vec![]),
+            (TLV_CLASS, vec![4]),
+            (TLV_TTL, vec![24]),
+            (TLV_TTL, vec![0, 0, 24]),
+            (TLV_RELAY, vec![0x22; 31]),
+            (TLV_AUTH, vec![0x33; 33]),
+        ] {
+            let mut bad = base.clone();
+            bad.extend_from_slice(&tlv(t, &v));
+            assert!(
+                KeyCard::from_bytes(&bad).is_err(),
+                "type {t:#x} len {}",
+                v.len()
+            );
+        }
+        // Root of the wrong length, and a declared length past the end.
+        let mut short_root = tlv(TLV_VERSION, &[FORMAT_VERSION]);
+        short_root.extend_from_slice(&tlv(TLV_ROOT, &[0x11; 31]));
+        assert!(KeyCard::from_bytes(&short_root).is_err());
+        let mut truncated = b.clone();
+        truncated.truncate(b.len() - 1);
+        assert!(KeyCard::from_bytes(&truncated).is_err());
+        // Relays may repeat.
+        let mut two = base.clone();
+        two.extend_from_slice(&tlv(TLV_RELAY, &[0x22; 32]));
+        two.extend_from_slice(&tlv(TLV_RELAY, &[0x66; 32]));
+        assert_eq!(KeyCard::from_bytes(&two).unwrap().relays.len(), 2);
+    }
+
+    #[test]
+    fn unknown_types_are_skipped() {
+        let mut b = card().to_bytes();
+        b.extend_from_slice(&tlv(0x40, &[1, 2, 3]));
+        b.extend_from_slice(&tlv(0x7f, &[]));
+        let d = KeyCard::from_bytes(&b).unwrap();
+        assert_eq!(d.ttl_hours, Some(48));
     }
 }

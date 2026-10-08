@@ -60,7 +60,7 @@ SSH_ALLOW=<your-public-ip> ./install-debian.sh   # 5–10 minutes; ends by print
 What it did: dist-upgrade + unattended-upgrades, swap off, nftables drop-all-inbound, Tor from
 deb.torproject.org with our `torrc` (onion service, PoW and intro-DoS defences, no logs),
 the binary to `/usr/local/bin/aska-drop`, the hardened systemd unit
-(`MemoryLock=infinity`, `LimitCORE=0`, output to null, read-only filesystem view), and a
+(`LimitMEMLOCK=infinity`, `LimitCORE=0`, standard output to null and standard error to the RAM-only journal — the relay prints nothing while serving, only a one-line fatal start-up or abort reason — read-only filesystem view), and a
 volatile journal. The relay is now listening on `127.0.0.1:4567` and Tor forwards the onion
 service to it.
 

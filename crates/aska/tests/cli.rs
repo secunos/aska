@@ -31,7 +31,7 @@ fn quick_send_receive_with_passphrase_and_decoy() {
             "--passphrase",
             "--decoy",
             "--ttl",
-            "2h",
+            "6h",
         ],
         &format!("real-pass\nremember to buy milk\nmilk\n{NOTE}\n"),
     );
@@ -313,6 +313,68 @@ fn refusals_and_exit_codes() {
 }
 
 use std::process::Command;
+
+/// Receiving-key path: the closing lines after a real, a decoy and a distress open must be the
+/// same, and so must the exit status — a distress open destroys the receiving seed, and 1.0.x
+/// decided the "this receiving key has now been used" line *after* the open, so it was missing
+/// exactly when the distress passphrase had been used (fixed in 1.1).
+#[test]
+fn distress_open_on_receiving_key_path_is_indistinguishable_from_decoy() {
+    let b = Bench::new("rxdistress");
+    let made = b.aska(&["--relay", ONION, "key", "receive"], "");
+    assert!(made.ok(), "{}", made.dump());
+    let seed = made.field("SEED").unwrap();
+    let askar = made.field("RECEIVING").unwrap();
+    let sent = b.aska(
+        &[
+            "send",
+            "--to",
+            &askar,
+            "--passphrase",
+            "--decoy",
+            "--distress",
+        ],
+        &format!(
+            "real-pass\ndecoy text here\ndecoy-pass\ndistress text here\ndistress-pass\n{NOTE}\n"
+        ),
+    );
+    assert!(sent.ok(), "{}", sent.dump());
+    let open = |pass: &str| {
+        b.aska(
+            &["--relay", ONION, "receive", "--receiving-seed"],
+            &format!("{seed}\n{pass}\n"),
+        )
+    };
+    let decoy = open("decoy-pass");
+    assert!(
+        decoy.ok() && decoy.stdout.contains("decoy text here"),
+        "{}",
+        decoy.dump()
+    );
+    let distress = open("distress-pass");
+    assert!(
+        distress.ok() && distress.stdout.contains("distress text here"),
+        "{}",
+        distress.dump()
+    );
+    assert_eq!(decoy.code, distress.code);
+    // Everything after the note itself — the closing lines — is identical.
+    let tail = |o: &Out| {
+        o.stderr
+            .lines()
+            .filter(|l| l.starts_with("Closed") || l.starts_with("This receiving key"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    assert_eq!(
+        tail(&decoy),
+        tail(&distress),
+        "{}\n---\n{}",
+        decoy.dump(),
+        distress.dump()
+    );
+    assert!(tail(&decoy).contains("This receiving key has now been used"));
+}
 
 /// 1.0.0 aborted (exit 134, "failed printing to stdout: Broken pipe") when its reader went
 /// away early, e.g. `aska verify | head -1`. Now: a quiet exit with 141, the status a shell

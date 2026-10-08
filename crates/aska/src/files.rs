@@ -14,6 +14,7 @@ use aska_core::consts::SizeClass;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::Path;
+use zeroize::Zeroizing;
 
 const MAGIC: &[u8; 4] = b"ASKF";
 const VERSION: u8 = 1;
@@ -124,9 +125,55 @@ pub fn read_bucket(path: &Path) -> io::Result<(u8, Vec<Record>)> {
 
 /// Overwrite a file's contents with random bytes, flush, then unlink (`profile forget`).
 /// Best effort on journaling and copy-on-write filesystems, as documented.
+/// A profile path must name a regular file (not a symlink, device or FIFO) of exactly the
+/// profile size, or the command refuses it: following a planted symlink to a device could read
+/// until memory ran out, and shredding through one would overwrite whatever it pointed at
+/// (pre-review C-14, applied to the graphical client in 1.0.0 and to the CLI in 1.1).
+pub fn check_profile_path(path: &Path) -> io::Result<()> {
+    let meta = std::fs::symlink_metadata(path)?;
+    if !meta.file_type().is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("{}: not a regular file", path.display()),
+        ));
+    }
+    if meta.len() as usize != aska_core::profile::PROFILE_LEN {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "{}: not a profile ({} bytes, expected {})",
+                path.display(),
+                meta.len(),
+                aska_core::profile::PROFILE_LEN
+            ),
+        ));
+    }
+    Ok(())
+}
+
+/// Read a profile file after `check_profile_path`, without following a symlink.
+pub fn read_profile(path: &Path) -> io::Result<Zeroizing<Vec<u8>>> {
+    use std::os::unix::fs::OpenOptionsExt;
+    check_profile_path(path)?;
+    let mut f = OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open(path)?;
+    let mut buf = Zeroizing::new(Vec::with_capacity(aska_core::profile::PROFILE_LEN + 1));
+    f.read_to_end(&mut buf)?;
+    if buf.len() != aska_core::profile::PROFILE_LEN {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "not a profile"));
+    }
+    Ok(buf)
+}
+
 pub fn shred(path: &Path) -> io::Result<()> {
-    let len = std::fs::metadata(path)?.len() as usize;
-    let mut f = OpenOptions::new().write(true).open(path)?;
+    use std::os::unix::fs::OpenOptionsExt;
+    let len = std::fs::symlink_metadata(path)?.len() as usize;
+    let mut f = OpenOptions::new()
+        .write(true)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open(path)?;
     let mut noise = vec![0u8; len];
     getrandom_fill(&mut noise)?;
     f.write_all(&noise)?;

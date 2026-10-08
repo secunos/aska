@@ -170,7 +170,7 @@ enum LevelArg {
 
 #[derive(Args, Clone)]
 struct ReceiveArgs {
-    /// Fetch only this size class (default: the Key Card's, else all three)
+    /// Fetch only this size class. Default: the Key Card's class; for 24 words or Shares, which carry no class, all three
     #[arg(long, value_parser = clap::value_parser!(u8).range(1..=3))]
     class: Option<u8>,
     /// Seconds the note stays on screen before it is burned (any key closes it sooner)

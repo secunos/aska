@@ -12,6 +12,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::Semaphore;
 use tokio::time::timeout;
+use zeroize::Zeroizing;
 
 pub type SharedStore = Arc<Mutex<Store>>;
 
@@ -41,7 +42,7 @@ async fn write_timed<S: AsyncWrite + Unpin>(s: &mut S, data: &[u8], t: Duration)
 }
 
 /// PoW gate (§6.2) followed by the store's PUT rules (§4.3), under one lock acquisition.
-fn put_policy(store: &SharedStore, p: &PutFixed, block: Vec<u8>) -> Vec<u8> {
+fn put_policy(store: &SharedStore, p: &PutFixed, block: Zeroizing<Vec<u8>>) -> Vec<u8> {
     let mut s = lock(store);
     let difficulty = s.difficulty_for(p.class);
     if difficulty > 0 {
@@ -112,13 +113,15 @@ pub async fn handle_connection<S: AsyncRead + AsyncWrite + Unpin>(
             // on an allocation failure, and under `mlockall(MCL_FUTURE)` an allocation can be
             // refused when RLIMIT_MEMLOCK is exhausted, so a relay that is out of lockable
             // memory answers FULL for this Block rather than dying under every client.
-            let mut block = Vec::new();
+            // Zeroising from the start: a body that is refused (bad length, duplicate, full,
+            // PoW invalid) or never stored is wiped when it is dropped, not left in freed RAM.
+            let mut block = Zeroizing::new(Vec::new());
             if block.try_reserve_exact(size).is_err() {
                 write_timed(&mut stream, &encode_response_header(Status::Full), t).await;
                 return;
             }
             block.resize(size, 0);
-            if !read_exact_timed(&mut stream, &mut block, t).await {
+            if !read_exact_timed(&mut stream, block.as_mut_slice(), t).await {
                 write_timed(&mut stream, &encode_response_header(Status::BadLength), t).await;
                 return;
             }

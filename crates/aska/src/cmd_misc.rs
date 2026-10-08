@@ -453,7 +453,7 @@ pub fn profile_create(ctx: &mut Ctx, file: &Path, auth_key: bool) -> CmdResult {
 
 pub fn profile_open(ctx: &mut Ctx, file: &Path) -> CmdResult {
     ctx.doctor_gate(false)?;
-    let bytes = std::fs::read(file)
+    let bytes = files::read_profile(file)
         .map_err(|e| Fail::new(exit::ERROR, format!("{}: {e}", file.display())))?;
     let pw = ctx
         .input
@@ -482,6 +482,7 @@ pub fn profile_open(ctx: &mut Ctx, file: &Path) -> CmdResult {
 
 pub fn profile_forget(ctx: &mut Ctx, file: &Path) -> CmdResult {
     ctx.doctor_gate(false)?;
+    files::check_profile_path(file)?;
     if !ctx.yes {
         let a = ctx.input.read_line(&format!(
             "Overwrite and delete {}? Type 'forget' to confirm: ",

@@ -64,14 +64,21 @@ echo "[5/7] relay binary"
 #   sha256sum aska-drop && compare with the fingerprint obtained out of band
 install -m 0755 aska-drop /usr/local/bin/aska-drop
 
-echo "[6/7] systemd unit (hardened, no logs)"
-install -m 0644 aska-drop.service /etc/systemd/system/aska-drop.service
-systemctl daemon-reload && systemctl enable --now aska-drop
-
-echo "[7/7] journald: keep nothing on disk"
+echo "[6/7] journald: keep nothing on disk (before the relay's first start, so no line of its ever touches the disk)"
 mkdir -p /etc/systemd/journald.conf.d
 printf '[Journal]\nStorage=volatile\nRuntimeMaxUse=16M\n' > /etc/systemd/journald.conf.d/volatile.conf
 systemctl restart systemd-journald
+# Assert it: a persistent journal directory must not exist, and journald must report volatile storage.
+if [ -d /var/log/journal ]; then
+  echo "journald: /var/log/journal exists — removing the persistent journal (nothing of the relay is in it yet)"
+  rm -rf /var/log/journal && systemctl restart systemd-journald
+fi
+grep -q '^Storage=volatile' /etc/systemd/journald.conf.d/volatile.conf || { echo "journald drop-in missing"; exit 1; }
+[ ! -d /var/log/journal ] || { echo "journald: persistent journal still present"; exit 1; }
+
+echo "[7/7] systemd unit (hardened; no output while serving, a fatal line only to the RAM journal)"
+install -m 0644 aska-drop.service /etc/systemd/system/aska-drop.service
+systemctl daemon-reload && systemctl enable --now aska-drop
 
 sleep 5
 echo "Onion address (hand this to your circle out of band, e.g. inside Key Cards):"

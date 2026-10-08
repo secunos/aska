@@ -11,10 +11,30 @@ use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 pub type Label = [u8; LABEL_LEN];
 pub type Challenge = [u8; CHALLENGE_LEN];
+
+/// A fixed-size map key that wipes itself when its slot is dropped. `HashMap::retain` and
+/// `remove` drop the key in place, so an expired label or a spent challenge is overwritten
+/// with zeros in the table rather than left readable in locked RAM until the slot is reused
+/// (finding of the ADP/1 draft 0.3 re-issue). The table's bytes themselves move unwiped when
+/// it grows; that residual is documented in ADP/1 §5.1.
+#[derive(Clone, PartialEq, Eq, Hash)]
+struct WipedKey<const N: usize>([u8; N]);
+
+impl<const N: usize> Drop for WipedKey<N> {
+    fn drop(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+impl<const N: usize> std::borrow::Borrow<[u8; N]> for WipedKey<N> {
+    fn borrow(&self) -> &[u8; N] {
+        &self.0
+    }
+}
 /// A stored Block. Shared between the store and any listing that is being written out, so a
 /// GET_ALL never copies the bucket (§4.4): the relay's peak memory stays at one copy of each
 /// Block however many listings are in flight. The bytes are zeroised when the last holder —
@@ -24,7 +44,8 @@ pub type Block = Arc<Zeroizing<Vec<u8>>>;
 struct Entry {
     block: Block,
     deadline: Instant,
-    digest: [u8; 32],
+    /// SHA-256 of the Block, for the idempotent-duplicate rule; wiped with the entry.
+    digest: Zeroizing<[u8; 32]>,
 }
 
 /// Relay policy: the complete configuration surface (§9.3, Table 4).
@@ -58,8 +79,8 @@ impl Config {
 
 pub struct Store {
     cfg: Config,
-    data: [HashMap<Label, Entry>; 3],
-    challenges: HashMap<Challenge, Instant>,
+    data: [HashMap<WipedKey<LABEL_LEN>, Entry>; 3],
+    challenges: HashMap<WipedKey<CHALLENGE_LEN>, Instant>,
     /// Test hook: an offset added to the monotonic clock (never set in production).
     clock_offset: Duration,
 }
@@ -132,7 +153,7 @@ impl Store {
             return [0u8; CHALLENGE_LEN];
         }
         let deadline = self.now() + Duration::from_secs(CHALLENGE_TTL_SECS);
-        self.challenges.insert(ch, deadline);
+        self.challenges.insert(WipedKey(ch), deadline);
         ch
     }
 
@@ -145,8 +166,15 @@ impl Store {
         }
     }
 
-    /// Store a Block (§4.3, §5). The caller has already handled proof-of-work.
-    pub fn put(&mut self, class: u8, ttl_hours: u16, label: Label, block: Vec<u8>) -> Status {
+    /// Store a Block (§4.3, §5). The caller has already handled proof-of-work. The body arrives
+    /// in a zeroising buffer so that a refused or duplicate Block is wiped when it is dropped.
+    pub fn put(
+        &mut self,
+        class: u8,
+        ttl_hours: u16,
+        label: Label,
+        block: Zeroizing<Vec<u8>>,
+    ) -> Status {
         self.expire();
         if !self.serves(class) {
             return Status::BadClass;
@@ -157,7 +185,7 @@ impl Store {
         if class_size(class) != Some(block.len()) {
             return Status::BadLength;
         }
-        let digest: [u8; 32] = Sha256::digest(&block).into();
+        let digest: Zeroizing<[u8; 32]> = Zeroizing::new(Sha256::digest(block.as_slice()).into());
         let cap = self.cfg.caps[class as usize - 1];
         let deadline = self.now() + Duration::from_secs(u64::from(ttl_hours) * 3600);
         let d = &mut self.data[class as usize - 1];
@@ -172,9 +200,9 @@ impl Store {
             return Status::Full;
         }
         d.insert(
-            label,
+            WipedKey(label),
             Entry {
-                block: Arc::new(Zeroizing::new(block)),
+                block: Arc::new(block),
                 deadline,
                 digest,
             },
@@ -194,7 +222,7 @@ impl Store {
         }
         let mut items: Vec<(Label, Block)> = self.data[class as usize - 1]
             .iter()
-            .map(|(l, e)| (*l, Arc::clone(&e.block)))
+            .map(|(l, e)| (l.0, Arc::clone(&e.block)))
             .collect();
         // Fisher–Yates with unbiased CSPRNG indices (HashMap iteration order is already
         // unpredictable, but the specification requires an explicit CSPRNG shuffle).
@@ -254,10 +282,10 @@ mod tests {
         getrandom::getrandom(&mut b).unwrap();
         b
     }
-    fn rblock(class: u8) -> Vec<u8> {
+    fn rblock(class: u8) -> Zeroizing<Vec<u8>> {
         let mut v = vec![0u8; class_size(class).unwrap()];
         getrandom::getrandom(&mut v).unwrap();
-        v
+        Zeroizing::new(v)
     }
 
     #[test]
@@ -278,7 +306,7 @@ mod tests {
         assert_eq!(s.counts(), [4, 0, 0]);
         let got = s.get_all(1).unwrap();
         assert_eq!(got.len(), 4);
-        assert!(got.iter().any(|(l, b)| *l == l0 && ***b == b0));
+        assert!(got.iter().any(|(l, b)| *l == l0 && ***b == *b0));
         assert!(s.get_all(4).is_none());
     }
 

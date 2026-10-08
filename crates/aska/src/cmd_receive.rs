@@ -168,6 +168,10 @@ pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, bucket: Option<&Path>) -> CmdResult {
         return Err(Fail::new(exit::NOTHING, NOTHING_FOUND));
     }
 
+    // Decided BEFORE the open: a distress open destroys the receiving seed (pre-review A-3),
+    // so asking afterwards would make the closing line differ between a distress and a decoy
+    // open — a tell for anyone watching the screen (finding of the v0.6 design re-issue).
+    let used_seed = s.has_receiving_seed();
     let info = s
         .open(pass.as_deref().map(|p| p.as_str()))
         .map_err(|e| match e {
@@ -199,7 +203,6 @@ pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, bucket: Option<&Path>) -> CmdResult {
     } else {
         out!("{}", body.as_str())?;
     }
-    let used_seed = s.has_receiving_seed();
     s.close();
     note!("Closed and burned.");
     if used_seed {

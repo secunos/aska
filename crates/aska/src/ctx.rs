@@ -170,7 +170,7 @@ impl Ctx {
 
         let mut relays = Vec::new();
         if let Some(path) = &g.profile {
-            let bytes = std::fs::read(path)
+            let bytes = files::read_profile(path)
                 .map_err(|e| Fail::new(exit::ERROR, format!("{}: {e}", path.display())))?;
             let pw = input
                 .read_hidden(&format!("Passphrase for profile {}: ", path.display()))?
@@ -425,11 +425,13 @@ pub fn parse_ttl(s: &str) -> Result<u16, String> {
     };
     let n: u32 = num
         .parse()
-        .map_err(|_| format!("bad TTL {s:?}: use e.g. 24h, 48h or 7d"))?;
+        .map_err(|_| format!("bad TTL {s:?}: use 1h, 6h, 24h, 48h, 72h or 7d"))?;
     let hours = n * mult;
-    if !(1..=168).contains(&hours) {
+    // Only the TTLs the clients offer and the decoy traffic imitates (`cover::TTL_CHOICES_HOURS`):
+    // any other value would single the note out from the cover traffic on the relay (CLI-06).
+    if !aska_core::cover::TTL_CHOICES_HOURS.contains(&(hours.min(u32::from(u16::MAX)) as u16)) {
         return Err(format!(
-            "TTL must be between 1h and 7d (168h), got {hours}h"
+            "bad TTL {s:?}: use 1h, 6h, 24h, 48h, 72h or 7d (other values would mark the note among the cover traffic)"
         ));
     }
     Ok(hours as u16)
@@ -470,7 +472,11 @@ mod tests {
     fn ttl_and_threshold_parsing() {
         assert_eq!(parse_ttl("24h").unwrap(), 24);
         assert_eq!(parse_ttl("7d").unwrap(), 168);
-        assert_eq!(parse_ttl("36").unwrap(), 36);
+        assert_eq!(parse_ttl("6").unwrap(), 6);
+        assert_eq!(parse_ttl("3d").unwrap(), 72);
+        // Only the cover-traffic TTL set (CLI-06, 1.1): 36 h was accepted by 1.0.x.
+        assert!(parse_ttl("36").is_err());
+        assert!(parse_ttl("2h").is_err());
         assert!(parse_ttl("8d").is_err());
         assert!(parse_ttl("0h").is_err());
         assert!(parse_ttl("soon").is_err());

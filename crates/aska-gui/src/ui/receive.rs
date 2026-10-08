@@ -466,9 +466,12 @@ fn open_found(ui: &Rc<Ui>, f: &Form, pass: Option<Zeroizing<String>>) {
         move || {
             // One code path for every slot: decoy, real and distress all come back as an
             // `OpenInfo` and are shown the same way; nothing here looks at `distress`.
+            // `seed_used` is read BEFORE the open: a distress open destroys the seed (A-3), and
+            // reading it afterwards made the View page's closing toast differ between a
+            // distress and a decoy open — a tell for anyone watching (fixed in 1.1).
+            let seed_used = s.has_receiving_seed();
             let r: Result<OpenInfo, SessionError> = s.open(pass.as_deref().map(|p| p.as_str()));
             drop(pass);
-            let seed_used = s.has_receiving_seed();
             (s, r, seed_used)
         },
         move |(s, r, seed_used)| {

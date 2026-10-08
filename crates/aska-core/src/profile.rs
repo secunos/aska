@@ -67,12 +67,22 @@ fn profile_root() -> Root {
     Root::from_slice(&d[..32])
 }
 
+/// NFKC-normalise the passphrase straight into a pre-sized zeroising buffer: two passes over
+/// the normalisation iterator (size, then bytes through a 4-byte scratch), so no partial copy
+/// is left behind in a reallocated `String` (pre-review C-5, applied to profiles in 1.1).
 fn nfkc(passphrase: &str) -> Result<Zeroizing<Vec<u8>>, Error> {
-    let p: Zeroizing<String> = Zeroizing::new(passphrase.nfkc().collect());
-    if p.trim().is_empty() {
+    use zeroize::Zeroize;
+    if passphrase.nfkc().all(char::is_whitespace) {
         return Err(Error::Encoding);
     }
-    Ok(Zeroizing::new(p.as_bytes().to_vec()))
+    let len: usize = passphrase.nfkc().map(char::len_utf8).sum();
+    let mut out = Zeroizing::new(Vec::with_capacity(len));
+    let mut scratch = [0u8; 4];
+    for c in passphrase.nfkc() {
+        out.extend_from_slice(c.encode_utf8(&mut scratch).as_bytes());
+    }
+    scratch.zeroize();
+    Ok(out)
 }
 
 /// Seal a profile under `passphrase`. Returns the 4 KiB file contents.

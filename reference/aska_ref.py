@@ -523,24 +523,49 @@ class KeyCard:
 
     @classmethod
     def from_bytes(cls, b: bytes) -> "KeyCard":
+        """Strict decoder (Block Format §7.3 Table 5; B-7): version first and exactly
+        FORMAT_VERSION; root/class/TTL/auth at most once with their exact lengths; relays
+        repeatable; unknown types skipped; declared lengths must fit."""
         i, root, relays, sc, ttl, auth = 0, None, [], None, None, None
+        first = True
         while i < len(b):
+            if i + 2 > len(b):
+                raise ValueError("truncated")
             t, l = b[i], b[i + 1]
             v = b[i + 2:i + 2 + l]
+            if len(v) != l:
+                raise ValueError("truncated")
             i += 2 + l
-            if t == TLV_VERSION and v != bytes([FORMAT_VERSION]):
-                raise ValueError("unsupported version")
+            if first:
+                if t != TLV_VERSION:
+                    raise ValueError("version element must be first")
+                if v != bytes([FORMAT_VERSION]):
+                    raise ValueError("unsupported version")
+                first = False
+                continue
+            if t == TLV_VERSION:
+                raise ValueError("duplicate version")
             elif t == TLV_ROOT:
+                if root is not None or len(v) != 32:
+                    raise ValueError("bad root")
                 root = v
             elif t == TLV_RELAY:
+                if len(v) != 32:
+                    raise ValueError("bad relay")
                 relays.append(v)
             elif t == TLV_CLASS:
+                if sc is not None or len(v) != 1 or v[0] not in (1, 2, 3):
+                    raise ValueError("bad class")
                 sc = v[0]
             elif t == TLV_TTL:
+                if ttl is not None or len(v) != 2:
+                    raise ValueError("bad ttl")
                 ttl = int.from_bytes(v, "big")
             elif t == TLV_AUTH:
+                if auth is not None or len(v) != 32:
+                    raise ValueError("bad auth")
                 auth = v
-        if root is None or len(root) != 32:
+        if root is None:
             raise ValueError("no root")
         return cls(root, relays, sc, ttl, auth)
 
