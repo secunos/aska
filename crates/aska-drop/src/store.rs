@@ -16,11 +16,12 @@ use zeroize::{Zeroize, Zeroizing};
 pub type Label = [u8; LABEL_LEN];
 pub type Challenge = [u8; CHALLENGE_LEN];
 
-/// A fixed-size map key that wipes itself when its slot is dropped. `HashMap::retain` and
-/// `remove` drop the key in place, so an expired label or a spent challenge is overwritten
-/// with zeros in the table rather than left readable in locked RAM until the slot is reused
-/// (finding of the ADP/1 draft 0.3 re-issue). The table's bytes themselves move unwiped when
-/// it grows; that residual is documented in ADP/1 §5.1.
+/// A fixed-size map key that wipes itself when its slot is dropped. `HashMap::retain` drops
+/// the key *in place*, so an expired label or a spent challenge is overwritten with zeros in
+/// the table rather than left readable in locked RAM until the slot is reused (finding of the
+/// ADP/1 draft 0.3 re-issue). `HashMap::remove` would not: it copies the key out of the slot
+/// before dropping that copy — so removals here go through `retain`. The table's bytes
+/// themselves move unwiped when it grows; that residual is documented in ADP/1 §5.1.
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct WipedKey<const N: usize>([u8; N]);
 
@@ -160,10 +161,13 @@ impl Store {
     /// Single use: true iff the challenge was outstanding and unexpired; it is removed either way.
     pub fn consume_challenge(&mut self, ch: &Challenge) -> bool {
         let now = self.now();
-        match self.challenges.remove(ch) {
-            Some(t) => t > now,
-            None => false,
-        }
+        let Some(t) = self.challenges.get(ch).copied() else {
+            return false;
+        };
+        // `retain` rather than `remove`: the spent challenge is then wiped in its slot (see
+        // `WipedKey`). The map holds at most the challenges issued in the last 120 s.
+        self.challenges.retain(|k, _| k.0 != *ch);
+        t > now
     }
 
     /// Store a Block (§4.3, §5). The caller has already handled proof-of-work. The body arrives
