@@ -275,6 +275,18 @@ behind at every move and are now boxed (`drop::Secret32`); and the private `*_in
 that `scrub_stack` relies on are marked `#[inline(never)]`, because release builds inlined them
 into the very frame the scrub cannot reach.
 
+**Paper mode in the graphical client (1.2):** Home → *Paper*. *Make a pad booklet* (camera,
+die rolls on an on-screen pad, or keyboard timing) → *Show for copying…* (one row at a time in
+the locked viewer, with the page's QR for a second device) or *Print…* — the client's own print
+dialog, not GTK's: GTK's print operation spools the job through a temporary file, which would
+put the pad on disk, so the client lists the printers itself, enforces the rule (volatile
+spool, USB device, a five-line checklist) and submits PostScript to the local CUPS over its
+socket. *Use a pad page*: scan or type a page, encipher a message or decipher one (tags
+checked first), *Done — destroy the page*. Block cards: *Send* → "Block cards instead of a
+relay" shows the sealed Block as QR cards (and prints them); *Receive* → "Read Block cards…"
+scans them in any order. Guarded hand-over: "Print this Share as a card…". Gate:
+`scripts/memory-gate-paper.sh` (no pad digit or page payload survives *Forget the booklet*).
+
 ## Packaging and platform validation (M6)
 
 `scripts/package-gui.sh [VERSION]` builds the release GUI and CLI and produces

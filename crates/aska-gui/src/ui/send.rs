@@ -67,6 +67,9 @@ struct Form {
     ttl_row: adw::ComboRow,
     to: adw::EntryRow,
     relays: adw::EntryRow,
+    /// The Paper level (DC-04 §7): the Block as QR cards instead of a relay; the key is
+    /// handed over as for Quick.
+    paper: gtk::ToggleButton,
     go: gtk::Button,
     progress: gtk::Label,
     error: gtk::Label,
@@ -165,7 +168,6 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
     let paper = card(&tr("send.level.paper"), &tr("send.level.paper.sub"));
     guarded.set_group(Some(&quick));
     paper.set_group(Some(&quick));
-    paper.set_sensitive(false);
     quick.set_active(true);
     cards.append(&quick);
     cards.append(&guarded);
@@ -344,6 +346,7 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
         ttl_row,
         to: to.clone(),
         relays,
+        paper: paper.clone(),
         go: go.clone(),
         progress,
         error,
@@ -550,7 +553,8 @@ fn fail(f: &Form, msg: &str) {
 
 fn seal_and_post(ui: &Rc<Ui>, f: &Form, retry: &Retry) {
     f.error.set_label("");
-    if ui.app.borrow().network_refused() {
+    let to_cards = f.paper.is_active();
+    if !to_cards && ui.app.borrow().network_refused() {
         return fail(f, &tr("send.error.refused"));
     }
     let note = text_of(&f.editor);
@@ -568,12 +572,12 @@ fn seal_and_post(ui: &Rc<Ui>, f: &Form, retry: &Retry) {
         },
         None => None,
     };
-    // Relays: typed here, or (for a Receiving Key) the hints it carries.
+    // Relays: typed here, or (for a Receiving Key) the hints it carries; none for cards.
     let relays = match parse_relays(&f.relays.text()) {
         Ok(r) => r,
         Err(e) => {
             let hinted = recipient.as_ref().is_some_and(|rk| !rk.relays.is_empty());
-            if hinted && f.relays.text().trim().is_empty() {
+            if (hinted || to_cards) && f.relays.text().trim().is_empty() {
                 Vec::new()
             } else {
                 return fail(f, &e);
@@ -703,7 +707,7 @@ fn seal_and_post(ui: &Rc<Ui>, f: &Form, retry: &Retry) {
             let r = s.seal(level);
             (s, r)
         },
-        move |(s, r)| {
+        move |(mut s, r)| {
             if let Err(e) = r {
                 let msg = match e {
                     SessionError::TooLarge => trf(
@@ -716,6 +720,24 @@ fn seal_and_post(ui: &Rc<Ui>, f: &Form, retry: &Retry) {
                     e => e.to_string(),
                 };
                 return fail(&f2, &msg);
+            }
+            if to_cards {
+                // Class 3 (64 cards) is not offered on paper.
+                let too_big = s
+                    .sealed_block()
+                    .map(|(_, b)| b.len() > SizeClass::C2.len())
+                    .unwrap_or(true);
+                if too_big {
+                    s.close();
+                    f2.go.set_sensitive(true);
+                    f2.progress.set_label("");
+                    return fail(&f2, &tr("send.error.cards_class"));
+                }
+                ui2.app.borrow_mut().session = Some(s);
+                f2.go.set_sensitive(true);
+                f2.progress.set_label("");
+                ui2.nav.push(&super::cards::build(&ui2, level, for_labels));
+                return;
             }
             ui2.app.borrow_mut().session = Some(s);
             post(&ui2, &f2, &retry2, level, for_labels);

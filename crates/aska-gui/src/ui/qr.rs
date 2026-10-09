@@ -9,12 +9,21 @@ use std::rc::Rc;
 /// Build a square drawing area showing `text` as a QR code. `size` is the requested side in
 /// pixels; the symbol scales to whatever the layout gives it.
 pub fn qr_widget(text: &str, size: i32) -> gtk::DrawingArea {
+    widget_for(qr::encode(text).ok(), size)
+}
+
+/// The same for a byte-mode symbol (a Block card, DC-04 §7).
+pub fn qr_widget_bytes(data: &[u8], size: i32) -> gtk::DrawingArea {
+    widget_for(qr::encode_bytes(data).ok(), size)
+}
+
+fn widget_for(matrix: Option<QrMatrix>, size: i32) -> gtk::DrawingArea {
     let area = gtk::DrawingArea::new();
     area.set_content_width(size);
     area.set_content_height(size);
     area.set_halign(gtk::Align::Center);
     area.add_css_class("aska-qr");
-    let matrix: Option<Rc<QrMatrix>> = qr::encode(text).ok().map(Rc::new);
+    let matrix: Option<Rc<QrMatrix>> = matrix.map(Rc::new);
     area.set_draw_func(move |_, cr, w, h| {
         cr.set_source_rgb(1.0, 1.0, 1.0);
         cr.rectangle(0.0, 0.0, f64::from(w), f64::from(h));

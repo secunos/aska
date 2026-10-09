@@ -12,6 +12,7 @@ repository.workspace = true
 [dependencies]
 aska-core = { path = "../aska-core" }
 aska-scan = { path = "../aska-scan" }
+aska-paper = { path = "../aska-paper" }
 aska-proto = { path = "../aska-proto" }
 gtk.workspace = true
 adw.workspace = true

@@ -63,6 +63,15 @@ pub fn build(ui: &Rc<Ui>, level: Level, for_labels: Vec<String>) -> adw::Navigat
     root.append(&note);
     root.append(&banner);
     root.append(&action);
+    // Share cards (DC-04 §7.2): this Share as a printed card, through the client's own print
+    // dialog (USB printers only). Guarded only.
+    let print_card = gtk::Button::builder()
+        .label(tr("handover.share.print"))
+        .halign(gtk::Align::Center)
+        .css_classes(["flat"])
+        .visible(matches!(level, Level::Guarded { .. }))
+        .build();
+    root.append(&print_card);
     root.append(&countdown);
 
     let relays_line = {
@@ -186,6 +195,28 @@ pub fn build(ui: &Rc<Ui>, level: Level, for_labels: Vec<String>) -> adw::Navigat
 
     if !show(0) {
         ui.go_home(Some(&tr("handover.expired")));
+    }
+    {
+        let (ui, index) = (ui.clone(), index.clone());
+        print_card.connect_clicked(move |_| {
+            let i = *index.borrow();
+            let (k, n) = match level {
+                Level::Guarded { k, n } => (k, n),
+                Level::Quick => return,
+            };
+            let share = {
+                let mut a = ui.app.borrow_mut();
+                a.session.as_mut().and_then(|s| s.share_text(i).ok())
+            };
+            let Some(share) = share else { return };
+            let opts = aska_paper::render::RenderOptions::default();
+            match aska_paper::render::render_share_card(&share, i as u8 + 1, n, k, &opts) {
+                Ok(r) => {
+                    super::printdlg::open(&ui, super::printdlg::Material::Share, vec![r], opts.dpi)
+                }
+                Err(e) => ui.toast(&e.to_string()),
+            }
+        });
     }
 
     // Next Share / Done.

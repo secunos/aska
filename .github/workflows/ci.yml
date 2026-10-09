@@ -34,6 +34,7 @@ jobs:
       - run: sudo -E env PATH="$PATH" GATE_SHOT_DIR="$PWD/gate-shots" ./scripts/no-file-writes-gui.sh target/release/aska-gui
       - run: ./scripts/timing-parity.sh
       - run: sudo -E env PATH="$PATH" GATE_SHOT_DIR="$PWD/gate-shots" ./scripts/memory-gate-gui.sh target/release/aska-gui   # reads /proc/PID/mem
+      - run: sudo -E env PATH="$PATH" GATE_SHOT_DIR="$PWD/gate-shots" ./scripts/memory-gate-paper.sh target/release/aska-gui   # paper mode (DC-04): no pad digit survives "Forget the booklet"
       - if: failure()
         uses: actions/upload-artifact@v4
         with:

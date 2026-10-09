@@ -3,7 +3,7 @@
 //! findings as banners above the footer. There is no list of anything, because there is
 //! nothing to list.
 
-use super::{receive, send, settings, shares, Ui};
+use super::{paper, receive, send, settings, shares, Ui};
 use crate::i18n::{tr, trf};
 use crate::state::{TorSource, TorState};
 use crate::worker;
@@ -50,9 +50,11 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
     let send_btn = big_button(&tr("home.send"), true);
     let recv_btn = big_button(&tr("home.receive"), false);
     let shares_btn = big_button(&tr("home.shares"), false);
+    let paper_btn = big_button(&tr("home.paper"), false);
     buttons.append(&send_btn);
     buttons.append(&recv_btn);
     buttons.append(&shares_btn);
+    buttons.append(&paper_btn);
     root.append(&buttons);
 
     // Spacer pushes banners + footer to the bottom.
@@ -114,6 +116,12 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
         let ui = ui.clone();
         recv_btn.connect_clicked(move |_| {
             ui.nav.push(&receive::build(&ui, false));
+        });
+    }
+    {
+        let ui = ui.clone();
+        paper_btn.connect_clicked(move |_| {
+            ui.nav.push(&paper::build(&ui));
         });
     }
     {

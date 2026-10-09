@@ -149,7 +149,7 @@ pub fn build(ui: &Rc<Ui>, info: OpenInfo, seed_used: bool) -> adw::NavigationPag
 }
 
 /// §6.2, honestly: what this system does about screenshots while the note is on screen.
-fn capture_line() -> String {
+pub fn capture_line() -> String {
     match aska_core::platform::session_type().as_deref() {
         Some("x11") => tr("view.capture.x11"),
         // No Wayland protocol lets a window exclude itself from capture (§6.2; 1.1 step 4

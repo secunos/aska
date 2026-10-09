@@ -20,7 +20,7 @@ use aska_core::drop::{FetchOutcome, Relay};
 use aska_core::session::{KeyStatus, OpenInfo, Session, SessionError};
 use aska_scan::{Preview, ScanError};
 use gtk::{gdk, glib};
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc};
@@ -63,6 +63,8 @@ struct Form {
     relays: adw::EntryRow,
     pass: PassphraseField,
     go: gtk::Button,
+    /// Read the Block from cards with the camera instead of a relay (DC-04 §7).
+    cards: gtk::Button,
     progress: gtk::Label,
     error: gtk::Label,
     shares_only: bool,
@@ -180,7 +182,23 @@ pub fn build(ui: &Rc<Ui>, shares_only: bool) -> adw::NavigationPage {
         .xalign(0.0)
         .css_classes(["error"])
         .build();
-    root.append(&go);
+    // "Read Block cards…" sits beside the pill in one row, so the page's vertical layout is
+    // exactly the 1.1 one (the GUI gates click by position); its explanation is a tooltip.
+    let go_row = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(8)
+        .halign(gtk::Align::Center)
+        .build();
+    let cards_btn = gtk::Button::builder()
+        .label(tr("receive.cards"))
+        .css_classes(["flat"])
+        .tooltip_text(tr("receive.cards.hint"))
+        .valign(gtk::Align::Center)
+        .sensitive(false)
+        .build();
+    go_row.append(&go);
+    go_row.append(&cards_btn);
+    root.append(&go_row);
     root.append(&progress);
     root.append(&error);
 
@@ -196,10 +214,15 @@ pub fn build(ui: &Rc<Ui>, shares_only: bool) -> adw::NavigationPage {
         relays,
         pass,
         go: go.clone(),
+        cards: cards_btn.clone(),
         progress,
         error,
         shares_only,
     };
+    {
+        let (ui2, f2) = (ui.clone(), f.clone());
+        cards_btn.connect_clicked(move |_| read_cards(&ui2, &f2));
+    }
 
     {
         let (ui2, f2) = (ui.clone(), f.clone());
@@ -392,7 +415,7 @@ fn add_stored_seed(ui: &Rc<Ui>, f: &Form, index: usize) {
             f.status
                 .set_label(&trf("receive.status.stored_seed", &[("check", &check)]));
             f.status.remove_css_class("dim-label");
-            f.go.set_sensitive(true);
+            set_go(f, true);
         }
         Err(e) => fail(f, &e.to_string()),
     }
@@ -401,7 +424,7 @@ fn add_stored_seed(ui: &Rc<Ui>, f: &Form, index: usize) {
 fn fail(f: &Form, msg: &str) {
     f.error.set_label(msg);
     f.progress.set_label("");
-    f.go.set_sensitive(true);
+    set_go(f, true);
     f.add.set_sensitive(true);
     f.scan.set_sensitive(true);
 }
@@ -456,7 +479,7 @@ fn add_material(ui: &Rc<Ui>, f: &Form, text: &str) {
             Ok(()) => {
                 f.status.set_label(&tr("receive.status.seed"));
                 f.status.remove_css_class("dim-label");
-                f.go.set_sensitive(true);
+                set_go(f, true);
             }
             Err(SessionError::Format(_)) => f.status.set_label(&tr("receive.status.bad_seed")),
             Err(e) => fail(f, &e.to_string()),
@@ -483,7 +506,7 @@ fn add_material(ui: &Rc<Ui>, f: &Form, text: &str) {
             };
             f.status.set_label(&tr(what));
             f.status.remove_css_class("dim-label");
-            f.go.set_sensitive(true);
+            set_go(f, true);
         }
         Ok(KeyStatus::NeedShares { have, need }) => {
             f.status.set_label(&trf(
@@ -719,6 +742,82 @@ fn scan_helper(ui: &Rc<Ui>, f: &Form) {
 /// Fetch as a `FetchJob` on a worker while the Session stays on the main thread (review
 /// finding C-1), match on the main thread, then open on a worker (the Session travels for
 /// the few seconds of Argon2id only), then View.
+/// The two "go" buttons move together: "Check the drop" and "Read Block cards".
+fn set_go(f: &Form, on: bool) {
+    f.go.set_sensitive(on);
+    f.cards.set_sensitive(on);
+}
+
+/// Block cards (DC-04 §7): scan byte-mode QR codes until the set is complete, hand the Block
+/// to the Session as if fetched, then open it like a fetched Block.
+fn read_cards(ui: &Rc<Ui>, f: &Form) {
+    f.error.set_label("");
+    let pass = f.pass.value();
+    let pass = (!pass.trim().is_empty()).then_some(pass);
+    set_go(f, false);
+    f.progress.set_label(&tr("receive.cards.progress"));
+    let set = Rc::new(RefCell::new(aska_paper::cards::CardSet::new()));
+    let (f2, set2) = (f.clone(), set.clone());
+    let (ui3, f3, set3) = (ui.clone(), f.clone(), set.clone());
+    let pass = Rc::new(RefCell::new(pass));
+    super::scan::scan_dialog(
+        ui,
+        &tr("receive.cards.title"),
+        true,
+        move |d| {
+            let super::scan::Decoded::Bytes(chunk) = d else {
+                return super::scan::Next::Continue;
+            };
+            let r = set2.borrow_mut().accept(&chunk);
+            match r {
+                Ok(aska_paper::cards::Accepted::Complete) => super::scan::Next::Stop,
+                Ok(aska_paper::cards::Accepted::Added { have, count })
+                | Ok(aska_paper::cards::Accepted::Duplicate { have, count }) => {
+                    f2.progress.set_label(&trf(
+                        "receive.cards.have",
+                        &[("have", &have.to_string()), ("count", &count.to_string())],
+                    ));
+                    super::scan::Next::Continue
+                }
+                Err(e) => {
+                    f2.progress.set_label(&e.to_string());
+                    super::scan::Next::Continue
+                }
+            }
+        },
+        move |err| {
+            if let Some(e) = err {
+                set_go(&f3, true);
+                return fail(&f3, &e.to_string());
+            }
+            let block = set3.borrow().block();
+            let Some(block) = block else {
+                set_go(&f3, true);
+                f3.progress.set_label("");
+                return;
+            };
+            let accepted = {
+                let mut a = ui3.app.borrow_mut();
+                match a.session.as_mut() {
+                    Some(s) => s.accept_block(block.to_vec()),
+                    None => {
+                        drop(a);
+                        set_go(&f3, true);
+                        return fail(&f3, &tr("handover.expired"));
+                    }
+                }
+            };
+            match accepted {
+                Ok(()) => open_found(&ui3, &f3, pass.borrow_mut().take()),
+                Err(e) => {
+                    set_go(&f3, true);
+                    report_fetch_error(&ui3, &f3, e);
+                }
+            }
+        },
+    );
+}
+
 fn check_drop(ui: &Rc<Ui>, f: &Form) {
     f.error.set_label("");
     if ui.app.borrow().network_refused() {
@@ -754,7 +853,7 @@ fn check_drop(ui: &Rc<Ui>, f: &Form) {
         }
     };
     ui.app.borrow_mut().inflight = Some(job.cancel_token());
-    f.go.set_sensitive(false);
+    set_go(f, false);
     f.add.set_sensitive(false);
     f.scan.set_sensitive(false);
     f.progress.set_label(&tr("receive.progress.fetching"));

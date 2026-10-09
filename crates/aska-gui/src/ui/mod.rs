@@ -2,13 +2,18 @@
 //! and the behaviours common to every screen (§5.7): the title is always "aska", there are
 //! no notifications, and an idle Session closes itself and returns to Home.
 
+pub mod cards;
+pub mod digitpad;
 pub mod handover;
 pub mod home;
 pub mod keypad;
 pub mod noteview;
+pub mod paper;
+pub mod printdlg;
 pub mod qr;
 pub mod receive;
 pub mod rxkey;
+pub mod scan;
 pub mod send;
 pub mod settings;
 pub mod shares;
