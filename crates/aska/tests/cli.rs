@@ -1079,10 +1079,18 @@ fn paper_generate_encipher_decipher_and_check_page() {
             assert!(dec.stderr.contains("no tag was checked"), "{}", dec.dump());
         }
     }
-    // A wrong hand tag, a wrong device tag, and the other page: nothing shown, exit 5.
+    // A wrong hand tag, a wrong device tag, and the other page: nothing shown, exit 5. The
+    // wrong tags are the right ones with their last digit changed — never, by chance, the
+    // right one (a fixed digit was, once in ten runs, on CI).
+    let bump = |t: &str| {
+        let mut b = t.as_bytes().to_vec();
+        let last = b.len() - 1;
+        b[last] = b'0' + (b[last] - b'0' + 1) % 10;
+        String::from_utf8(b).unwrap()
+    };
     for (c, h, d) in [
-        (cipher.clone(), "0000".to_string(), String::new()),
-        (cipher.clone(), String::new(), format!("{}0", &dev[..18])),
+        (cipher.clone(), bump(&hand), String::new()),
+        (cipher.clone(), String::new(), bump(&dev)),
     ] {
         let dec = b.aska(
             &["paper", "decipher", "--page-from", "typed"],
