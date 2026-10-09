@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/aska-core", "crates/aska-proto", "crates/aska", "crates/aska-drop", "crates/aska-gui", "crates/aska-scan"]
+members = ["crates/aska-core", "crates/aska-proto", "crates/aska", "crates/aska-drop", "crates/aska-gui", "crates/aska-scan", "crates/aska-paper"]
 
 [workspace.package]
 version = "1.1.0"

@@ -162,6 +162,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "aska-paper"
+version = "1.1.0"
+dependencies = [
+ "aska-core",
+ "aska-scan",
+ "getrandom",
+ "libc",
+ "qrcode",
+ "serde",
+ "serde_json",
+ "sha3 0.10.9",
+ "subtle",
+ "thiserror",
+ "unicode-normalization",
+ "zeroize",
+]
+
+[[package]]
 name = "aska-proto"
 version = "1.1.0"
 dependencies = [

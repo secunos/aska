@@ -13,6 +13,10 @@ not be used as a product.
 | `test_aska.py` | 16 tests: round trips for all size classes, decoy/distress independence, tamper detection, size limits, statistical randomness smoke test, share combine/forgery/mixing, encodings, known-answer bech32m and onion vectors |
 | `gen_vectors.py` | Regenerates `test_vectors.json` deterministically |
 | `test_vectors.json` | 8 vectors (TV-1 … TV-8) with intermediate values and full Block hex |
+| `aska_paper_ref.py` | Paper mode (DC-04, release 1.2): checkerboard, modulo-10 pad, hand tag (mod 9 973), device tag (mod 2⁶¹ − 1), canonical page string and checksum, Block-card framing, Toeplitz convention |
+| `test_paper.py` | 7 tests incl. the DC-04 worked example, the hand tag's forgery bound (sampled), page checksum, cards, and reproduction of `tv_paper.json` |
+| `gen_paper_vectors.py` | Regenerates `tv_paper.json` (TV-P1 … TV-P7) deterministically |
+| `tv_paper.json` | Paper-mode vectors: a 400-digit page with keys, three messages with both tags, the worked-example page, a page without hand keys, a card set, a Toeplitz vector |
 | `aska_drop.py` | ADP/1 reference **relay** (asyncio, loopback, RAM-only store, expire-only TTL, adaptive PoW, randomised listing) and **client** library (SOCKS5 → Tor) in one file |
 | `test_drop.py` | 8 tests incl. two end-to-end flows (Level 1 with decoy; Level 2 via Shares), malformed requests, randomised listing, expiry, PoW |
 | `deploy/torrc.aska-drop` | Tor configuration: onion-only, PoW + intro-DoS defence, no logs |

@@ -21,6 +21,8 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - run: cargo test --workspace --locked   # includes the Python interop tests (python3 is on the runner)
+      - run: python3 reference/test_paper.py   # paper-mode reference (DC-04): standard library only
+      - run: sudo -E env PATH="$PATH" ./scripts/no-file-writes-lib.sh aska-paper   # the paper crate's tests open nothing for writing
       # The write and memory gates trace or read the Aska processes, which make themselves
       # non-dumpable; only root can do that. Build everything as the runner user first, then
       # run the gates — and only the gates — as root.

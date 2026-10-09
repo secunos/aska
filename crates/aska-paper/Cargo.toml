@@ -1,0 +1,26 @@
+[package]
+name = "aska-paper"
+description = "Aska paper mode (DC-04): one-time pad pages with one-time tags, the two-source entropy pipeline, Block and Share cards, and the page renderer — all in locked memory, nothing written"
+license = "MIT OR Apache-2.0"
+version.workspace = true
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+aska-core = { path = "../aska-core" }
+aska-scan = { path = "../aska-scan" }
+zeroize.workspace = true
+sha3.workspace = true
+subtle.workspace = true
+getrandom.workspace = true
+thiserror.workspace = true
+qrcode.workspace = true
+libc.workspace = true
+unicode-normalization = "0.1"
+
+[dev-dependencies]
+serde.workspace = true
+serde_json.workspace = true

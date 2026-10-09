@@ -38,6 +38,7 @@ Plan: `docs/Aska_Prototype_Plan_v0.1.md`.
 | `crates/aska-gui` | GTK4 / libadwaita graphical client: Home, Send, Hand-over, Receive, View, Settings, Shares, Receiving key | MIT OR Apache-2.0 | **M5 + M5c code done** |
 | `crates/aska-drop` | Dead Drop relay: RAM-only store, PoW, no logs, mlock | AGPL-3.0 | **M2 done** |
 | `crates/aska-scan` | in-process QR scanning: V4L2 camera capture through `libc` only, pure-Rust decoder (`rqrr`); frames wiped | MIT OR Apache-2.0 | **1.1** |
+| `crates/aska-paper` | paper mode (DC-04): one-time pad pages with a hand tag and a device tag, the two-source entropy pipeline (health tests, min-entropy estimate, seeded Toeplitz extractor, mixing with the OS generator), Block and Share cards, the bitmap-font page renderer — in locked memory, nothing written | MIT OR Apache-2.0 | **1.2 (in development)** |
 
 ## Running it yourself (Debian 12/13 or Ubuntu 24.04+ in VirtualBox)
 
