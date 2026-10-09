@@ -143,7 +143,22 @@ aska send --to ASKAR …                       seal for a receiving key (nothing
 aska receive --receiving-seed                receive with the 24 seed words (DC-02)
 aska verify                                  own SHA-256, release tag + key id, signed SHA256SUMS check (no network)
 aska profile create|open|forget --file FILE  optional encrypted profile (relays + circle key, C-07)
+aska paper generate [--source camera|dice|typing] [--pages 10] [--digits 400] [--no-hand-tag]
+            (--rows | --ps | --pbm | --print PRINTER --i-have-read-the-rules)     one-time pad booklet (1.2, DC-04)
+aska paper encipher|decipher|check-page [--page-from camera|typed]   a message with a pad page; tags checked first
+aska paper worksheet                         the table, the arithmetic, the hand tag, the rules (not secret)
+aska paper cover --set-code N --direction A|B --number N …   a cover page for a ciphertext and an innocent text
+aska paper seal-cards … / aska paper open-cards   a Block as QR cards instead of a relay (classes 1–2)
+aska paper share-cards                       Shares as cards, one per sheet
 ```
+
+**Paper mode (1.2, in development; `docs/Aska_Design_Change_DC-04_Paper_Mode_v0.2.md`).** A pad
+is printed only when the print spool is on volatile storage (tmpfs/ramfs) and the printer is
+reached over USB — otherwise the client refuses and shows the page row by row for copying by
+hand; `--ps`/`--pbm` write the sheets to standard output for an operator who knows where they go.
+Every booklet is labelled PHYSICAL (camera noise through the seeded extractor met the entropy
+budget) or SEEDED (dice or typing seeded the generator — computational, not a pad with a proof).
+Block cards are read with the built-in camera only (the helper cannot carry bytes).
 
 Global options: `--relay ONION` (repeatable), `--profile FILE`, `--socks HOST:PORT`
 (default 127.0.0.1:9050, loopback only) or `--tor-browser` (Tor Browser's Tor on 127.0.0.1:9150),

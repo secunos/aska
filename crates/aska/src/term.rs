@@ -369,6 +369,57 @@ impl Input {
         Ok(pressed)
     }
 
+    /// Keyboard timing as seed material (paper mode, DC-04 §4.2): raw mode, no echo; records
+    /// the microsecond interval between successive keys until Enter is pressed after at least
+    /// `min_keys` keys. The keys themselves are discarded — only the timing is kept. Not
+    /// available in `--stdin` mode.
+    pub fn read_timed_keys(&mut self, prompt: &str, min_keys: usize) -> io::Result<Vec<u32>> {
+        let Input::Tty(t) = self else {
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "keyboard timing needs an interactive terminal",
+            ));
+        };
+        t.dev.write_all(prompt.as_bytes())?;
+        t.dev.flush()?;
+        let fd = t.dev.as_raw_fd();
+        let g = TermiosGuard::new(fd)?;
+        g.apply(|a| {
+            a.c_lflag &= !(libc::ICANON | libc::ECHO);
+            a.c_cc[libc::VMIN] = 1;
+            a.c_cc[libc::VTIME] = 0;
+        })?;
+        let mut intervals = Vec::with_capacity(min_keys + 16);
+        let mut last = Instant::now();
+        loop {
+            t.await_input()?;
+            let mut b = [0u8; 1];
+            if t.dev.read(&mut b)? == 0 {
+                break;
+            }
+            let now = Instant::now();
+            let us = now
+                .duration_since(last)
+                .as_micros()
+                .min(u128::from(u32::MAX)) as u32;
+            last = now;
+            if b[0] == b'\r' || b[0] == b'\n' {
+                if intervals.len() >= min_keys {
+                    break;
+                }
+                continue;
+            }
+            intervals.push(us);
+            b.zeroize();
+            if intervals.len() % 32 == 0 {
+                t.dev.write_all(b".")?;
+                t.dev.flush()?;
+            }
+        }
+        t.dev.write_all(b"\n")?;
+        Ok(intervals)
+    }
+
     /// Write to the terminal (or stdout in `--stdin` mode).
     pub fn write(&mut self, s: &str) -> io::Result<()> {
         match self {

@@ -118,10 +118,26 @@ fn fetch_with_retries(s: &mut Session, o: &ReceiveOpts) -> Result<bool, Fail> {
     Ok(false)
 }
 
-pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, bucket: Option<&Path>) -> CmdResult {
-    let network = bucket.is_none() && !o.check_only;
+/// Where the Blocks come from.
+pub enum Source<'a> {
+    /// Fetch the buckets from the relays (`receive`, `share combine`).
+    Network,
+    /// A bucket file fetched elsewhere (`open BUCKET`).
+    Bucket(&'a Path),
+    /// Block cards read with the camera (`paper open-cards`, DC-04 §7).
+    Cards,
+}
+
+pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, source: Source<'_>) -> CmdResult {
+    let network = matches!(source, Source::Network) && !o.check_only;
     ctx.doctor_gate(network)?;
     let mut s = ctx.new_session(aska_proto::DEFAULT_TTL_HOURS, o.class)?;
+    // Cards are read before the key material: the --stdin protocol puts the CARD lines first,
+    // and at the terminal the camera is wanted once, for the cards, before any typing.
+    let card_block = match &source {
+        Source::Cards => Some(crate::cmd_paper::collect_block_cards(ctx)?),
+        _ => None,
+    };
     if o.receiving_seed {
         let checks = ctx.stored_seed_checks();
         let prompt = match checks.len() {
@@ -169,8 +185,8 @@ pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, bucket: Option<&Path>) -> CmdResult {
         .read_hidden("Passphrase (press Enter if the sender set none): ")?
         .filter(|p| !p.is_empty());
 
-    let found = match bucket {
-        Some(p) => {
+    let found = match &source {
+        Source::Bucket(p) => {
             let (class, records) = files::read_bucket(p)?;
             note!(
                 "Matching {} record(s) of class {class} from {} …",
@@ -179,7 +195,13 @@ pub fn run(ctx: &mut Ctx, o: &ReceiveOpts, bucket: Option<&Path>) -> CmdResult {
             );
             s.accept_bucket(records)?
         }
-        None => {
+        Source::Cards => {
+            let block = card_block.expect("collected above");
+            note!("Taking the Block from the cards …");
+            s.accept_block(block.to_vec())?;
+            true
+        }
+        Source::Network => {
             note!(
                 "Fetching through Tor (whole buckets, matched locally; this can take a minute) …"
             );

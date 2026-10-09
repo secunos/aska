@@ -15,6 +15,8 @@
 //!   operating system's generator, the finished-booklet statistics and the PHYSICAL/SEEDED
 //!   label (§4);
 //! * [`cards`] — Block cards (a Block cut into QR-sized chunks) and Share cards (§7);
+//! * [`print`] — the printing rule (volatile spool, USB printer), the IPP client for the
+//!   local CUPS socket and the PostScript carrier (§5.2);
 //! * [`render`] — a page drawn into a one-bit raster from an embedded bitmap font, so no font
 //!   cache or toolkit ever sees a pad digit (§8.1).
 //!
@@ -32,6 +34,7 @@ pub mod entropy;
 pub mod handtag;
 pub mod pad;
 pub mod page;
+pub mod print;
 pub mod render;
 
 pub use aska_core::secret::LockedBuf;
@@ -66,6 +69,9 @@ pub enum PaperError {
     /// A Block card set problem.
     #[error("card: {0}")]
     Card(&'static str),
+    /// Printing: the print system could not be reached or refused the job.
+    #[error("printing: {0}")]
+    Print(String),
     /// The operating system's random source failed.
     #[error("the system random source failed")]
     Rng,

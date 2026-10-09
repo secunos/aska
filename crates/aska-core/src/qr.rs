@@ -61,6 +61,22 @@ pub fn encode(text: &str) -> Result<QrMatrix, Error> {
     Ok(QrMatrix { size, modules })
 }
 
+/// Encode raw bytes as a QR symbol in byte mode (error correction L — the clients print these
+/// large, and a Block card carries CRC-32 of its own). Used for Block cards (DC-04 §7).
+pub fn encode_bytes(data: &[u8]) -> Result<QrMatrix, Error> {
+    if data.is_empty() {
+        return Err(Error::Encoding);
+    }
+    let code =
+        QrCode::with_error_correction_level(data, EcLevel::L).map_err(|_| Error::Encoding)?;
+    let size = code.width();
+    let mut modules = Zeroizing::new(Vec::with_capacity(size * size));
+    for c in code.to_colors() {
+        modules.push(u8::from(c == qrcode::Color::Dark));
+    }
+    Ok(QrMatrix { size, modules })
+}
+
 /// Half-block rendering: two module rows per text line, dark-on-light forced with ANSI colours
 /// so the symbol scans on any terminal theme. `ansi = false` gives the bare block characters
 /// (for a light terminal or a file the user explicitly asked for).

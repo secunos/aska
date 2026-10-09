@@ -26,6 +26,20 @@ pub struct SendOpts {
     pub to: Option<String>,
 }
 
+/// Where the sealed Block goes.
+pub enum Target<'a> {
+    /// Post it to the relays (`send`).
+    Post,
+    /// Write it to a user-named file (`seal`).
+    File(&'a Path),
+    /// Output it as Block cards (`paper seal-cards`, DC-04 §7).
+    Cards {
+        sink: crate::cmd_paper::Sink,
+        paper: crate::cmd_paper::PaperArg,
+        dpi: u32,
+    },
+}
+
 type Pair = Option<(SecretLine, SecretLine)>;
 
 /// Everything the user types, in the two modes' orders (see `--help`), in locked memory.
@@ -153,8 +167,8 @@ fn post_with_retries(s: &mut Session, attempts: u32) -> CmdResult {
     ))
 }
 
-pub fn run(ctx: &mut Ctx, o: &SendOpts, seal_out: Option<&Path>) -> CmdResult {
-    let network = seal_out.is_none();
+pub fn run(ctx: &mut Ctx, o: &SendOpts, target: Target<'_>) -> CmdResult {
+    let network = matches!(target, Target::Post);
     ctx.doctor_gate(network)?;
     // A Receiving Key may carry its own relay hints; otherwise relays must be given.
     let recipient = match &o.to {
@@ -204,8 +218,8 @@ pub fn run(ctx: &mut Ctx, o: &SendOpts, seal_out: Option<&Path>) -> CmdResult {
     })?;
     note!("Sealed.");
 
-    match seal_out {
-        Some(out) => {
+    match &target {
+        Target::File(out) => {
             let (label, block) = s.sealed_block()?;
             files::write_block(out, &label, block)?;
             note!(
@@ -215,7 +229,19 @@ pub fn run(ctx: &mut Ctx, o: &SendOpts, seal_out: Option<&Path>) -> CmdResult {
                 out.display()
             );
         }
-        None => {
+        Target::Cards { sink, paper, dpi } => {
+            let (_label, block) = s.sealed_block()?;
+            if block.len() > SizeClass::C2.len() {
+                return Err(Fail::new(
+                    exit::ERROR,
+                    "class 3 Blocks are not offered on paper (64 cards); shorten the note or pin --class 2",
+                ));
+            }
+            let block = zeroize::Zeroizing::new(block.to_vec());
+            crate::cmd_paper::emit_block_cards(ctx, &block, sink, *paper, *dpi)?;
+            note!("Block cards produced; the Block itself is not kept.");
+        }
+        Target::Post => {
             note!("Posting through Tor (a fresh circuit per request; this can take a minute) …");
             post_with_retries(&mut s, o.attempts)?;
             note!("Posted.");

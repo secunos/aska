@@ -27,6 +27,7 @@ macro_rules! note {
 }
 
 mod cmd_misc;
+mod cmd_paper;
 mod cmd_receive;
 mod cmd_send;
 mod ctx;
@@ -64,7 +65,16 @@ attempt ends with the same advice — connect Tor through a bridge with your pla
                 --profile (xxxx-xxxx-xxxx), or empty for the only stored seed.
   profile create: the passphrase.  profile add-seed: the passphrase, then the 24 words
                 (none with --new).  profile remove-seed: the passphrase.
-Hand-over material is then printed as `KEYCARD …`, `WORDS …`, `SHARE i/n …`, `RELAYS …` lines.";
+Hand-over material is then printed as `KEYCARD …`, `WORDS …`, `SHARE i/n …`, `RELAYS …` lines.
+  paper generate --source dice: die-roll lines (digits 1–6) until EOF.
+  paper encipher: page digit lines, an EMPTY line, then the message until EOF — prints
+                `CIPHER …`, `HANDTAG …`, `DEVTAG …`.
+  paper decipher: page digit lines, EMPTY line, ciphertext line, hand-tag line (may be
+                empty), device-tag line (may be empty).   paper check-page: page digit lines.
+  paper cover:  ciphertext line, then the innocent text until EOF.
+  paper seal-cards: as send; prints `CARD i/n <hex>` lines, then the hand-over lines.
+  paper open-cards: `CARD … <hex>` lines (all of them), then as receive.
+  paper share-cards: Share lines until EOF (with --rows: card text; otherwise sheets).";
 
 #[derive(Parser)]
 #[command(name = "aska", version, about = "Aska secure notes — command-line client", long_about = LONG_ABOUT)]
@@ -198,6 +208,11 @@ struct ReceiveArgs {
 enum Cmd {
     /// Run the environment checks and exit (0 clean, 2 warnings, 6 refusals)
     Doctor,
+    /// Paper mode: one-time pad booklets, hand and device tags, Block and Share cards (DC-04)
+    Paper {
+        #[command(subcommand)]
+        cmd: PaperCmd,
+    },
     /// Write a note, seal it, post it through Tor, then hand over the key
     Send(SendArgs),
     /// Split mode, offline side: seal a note into a Block file instead of posting it
@@ -349,6 +364,146 @@ enum ProfileCmd {
     },
 }
 
+/// Where rendered sheets go (exactly one).
+#[derive(Args, Clone)]
+struct SheetOut {
+    /// PostScript on standard output (pipe it where you mean to; the pad is in it)
+    #[arg(long, group = "sink")]
+    ps: bool,
+    /// Binary PBM images on standard output
+    #[arg(long, group = "sink")]
+    pbm: bool,
+    /// Row by row on the terminal, for copying by hand (pads); text lines in --stdin mode
+    #[arg(long, group = "sink")]
+    rows: bool,
+    /// Send to this printer through the local print system (pads: volatile spool + USB only)
+    #[arg(long, group = "sink", value_name = "PRINTER")]
+    print: Option<String>,
+    /// For printing a pad: you have read the rules (`aska paper worksheet`), soluble paper is
+    /// loaded, no colour laser, radios off, nobody else at the tray
+    #[arg(long)]
+    i_have_read_the_rules: bool,
+    /// Paper size
+    #[arg(long, value_enum, default_value_t = cmd_paper::PaperArg::A4)]
+    paper: cmd_paper::PaperArg,
+    /// Resolution of the rendered sheets
+    #[arg(long, default_value_t = 150, value_parser = clap::value_parser!(u32).range(72..=600))]
+    dpi: u32,
+}
+
+impl SheetOut {
+    fn sink(&self, default_rows: bool) -> Result<cmd_paper::Sink, Fail> {
+        Ok(if self.ps {
+            cmd_paper::Sink::Ps
+        } else if self.pbm {
+            cmd_paper::Sink::Pbm
+        } else if let Some(p) = &self.print {
+            cmd_paper::Sink::Print(p.clone())
+        } else if self.rows || default_rows {
+            cmd_paper::Sink::Rows
+        } else {
+            return Err(Fail::new(
+                exit::ERROR,
+                "choose an output: --ps, --pbm, --rows or --print PRINTER",
+            ));
+        })
+    }
+}
+
+#[derive(Subcommand)]
+enum PaperCmd {
+    /// Generate a one-time pad booklet (A-pages for one holder's sending, B-pages for the other's)
+    Generate {
+        /// Pages per direction (1–50)
+        #[arg(long, default_value_t = 10, value_parser = clap::value_parser!(u8).range(1..=50))]
+        pages: u8,
+        /// Pad digits per page: 200, 400 or 600
+        #[arg(long, default_value_t = 400)]
+        digits: usize,
+        /// The physical randomness source
+        #[arg(long, value_enum, default_value_t = cmd_paper::SourceArg::Camera)]
+        source: cmd_paper::SourceArg,
+        /// Leave out the hand-tag keys (halves the page; no integrity check by hand)
+        #[arg(long)]
+        no_hand_tag: bool,
+        /// Set code printed on every page (default: random)
+        #[arg(long, value_parser = clap::value_parser!(u16).range(0..=9999))]
+        set_code: Option<u16>,
+        /// Camera device (default: the first /dev/video*)
+        #[arg(long, value_name = "PATH")]
+        camera: Option<PathBuf>,
+        /// Copies of every page (two booklets: one per holder)
+        #[arg(long, default_value_t = 2, value_parser = clap::value_parser!(u8).range(1..=4))]
+        copies: u8,
+        #[command(flatten)]
+        out: SheetOut,
+    },
+    /// Encipher a message with a pad page (page from the camera or typed); prints ciphertext and tags
+    Encipher {
+        #[arg(long, value_enum, default_value_t = cmd_paper::PageFrom::Camera)]
+        page_from: cmd_paper::PageFrom,
+        /// Do not pad the message with spaces to the page's length (the length then shows)
+        #[arg(long)]
+        no_pad: bool,
+    },
+    /// Decipher a ciphertext with a pad page; checks the tag(s) first and shows nothing on failure
+    Decipher {
+        #[arg(long, value_enum, default_value_t = cmd_paper::PageFrom::Camera)]
+        page_from: cmd_paper::PageFrom,
+    },
+    /// Read a page and verify its checksum
+    CheckPage {
+        #[arg(long, value_enum, default_value_t = cmd_paper::PageFrom::Camera)]
+        page_from: cmd_paper::PageFrom,
+    },
+    /// Print the worksheet: the table, the arithmetic, the hand tag and the rules (not secret)
+    Worksheet,
+    /// A cover page: the pad that turns a ciphertext into an innocent text of the same length
+    Cover {
+        #[arg(long, value_parser = clap::value_parser!(u16).range(0..=9999))]
+        set_code: u16,
+        /// A or B
+        #[arg(long, value_parser = parse_direction)]
+        direction: aska_paper::page::Direction,
+        #[arg(long, value_parser = clap::value_parser!(u8).range(1..=50))]
+        number: u8,
+        #[arg(long, default_value_t = 400)]
+        digits: usize,
+        #[arg(long)]
+        no_hand_tag: bool,
+        #[command(flatten)]
+        out: SheetOut,
+    },
+    /// Seal a note into a Block and output it as Block cards instead of posting it; then hand over the key
+    SealCards {
+        #[command(flatten)]
+        args: SendArgs,
+        #[command(flatten)]
+        out: SheetOut,
+    },
+    /// Read Block cards with the camera until the Block is complete, then open it like `aska receive`
+    OpenCards {
+        #[command(flatten)]
+        args: ReceiveArgs,
+    },
+    /// Share cards: each Share as a QR with its grouped text, one card per sheet
+    ShareCards {
+        /// Threshold shown on the cards ("any K open the note"); default 2
+        #[arg(long)]
+        threshold: Option<u8>,
+        #[command(flatten)]
+        out: SheetOut,
+    },
+}
+
+fn parse_direction(s: &str) -> Result<aska_paper::page::Direction, String> {
+    match s.to_ascii_uppercase().as_str() {
+        "A" => Ok(aska_paper::page::Direction::A),
+        "B" => Ok(aska_paper::page::Direction::B),
+        _ => Err("direction must be A or B".into()),
+    }
+}
+
 fn send_opts(a: &SendArgs) -> cmd_send::SendOpts {
     cmd_send::SendOpts {
         guarded: a.level == LevelArg::Guarded,
@@ -433,13 +588,100 @@ fn run(cli: Cli) -> Result<i32, Fail> {
     })?;
     match cli.cmd {
         Cmd::Doctor => doctor_only(&mut ctx)?,
-        Cmd::Send(a) => cmd_send::run(&mut ctx, &send_opts(&a), None)?,
-        Cmd::Seal { args, out } => cmd_send::run(&mut ctx, &send_opts(&args), Some(&out))?,
-        Cmd::Post { file, ttl } => cmd_misc::post(&mut ctx, &file, ttl)?,
-        Cmd::Receive(a) => cmd_receive::run(&mut ctx, &receive_opts(&a, false, false), None)?,
-        Cmd::Open { bucket, args } => {
-            cmd_receive::run(&mut ctx, &receive_opts(&args, false, false), Some(&bucket))?
+        Cmd::Send(a) => cmd_send::run(&mut ctx, &send_opts(&a), cmd_send::Target::Post)?,
+        Cmd::Seal { args, out } => {
+            cmd_send::run(&mut ctx, &send_opts(&args), cmd_send::Target::File(&out))?
         }
+        Cmd::Paper { cmd } => match cmd {
+            PaperCmd::Generate {
+                pages,
+                digits,
+                source,
+                no_hand_tag,
+                set_code,
+                camera,
+                copies,
+                out,
+            } => cmd_paper::generate(
+                &mut ctx,
+                &cmd_paper::GenerateOpts {
+                    pages,
+                    digits,
+                    source,
+                    hand_tag: !no_hand_tag,
+                    set_code,
+                    camera,
+                    copies,
+                    sink: out.sink(false)?,
+                    rules_read: out.i_have_read_the_rules,
+                    paper: out.paper,
+                    dpi: out.dpi,
+                },
+            )?,
+            PaperCmd::Encipher { page_from, no_pad } => cmd_paper::encipher(
+                &mut ctx,
+                &cmd_paper::EncipherOpts {
+                    from: page_from,
+                    pad_to_page: !no_pad,
+                },
+            )?,
+            PaperCmd::Decipher { page_from } => cmd_paper::decipher(&mut ctx, page_from)?,
+            PaperCmd::CheckPage { page_from } => cmd_paper::check_page(&mut ctx, page_from)?,
+            PaperCmd::Worksheet => cmd_paper::worksheet()?,
+            PaperCmd::Cover {
+                set_code,
+                direction,
+                number,
+                digits,
+                no_hand_tag,
+                out,
+            } => cmd_paper::cover(
+                &mut ctx,
+                &cmd_paper::CoverOpts {
+                    set_code,
+                    direction,
+                    number,
+                    digits,
+                    hand_tag: !no_hand_tag,
+                    sink: out.sink(false)?,
+                    rules_read: out.i_have_read_the_rules,
+                    paper: out.paper,
+                    dpi: out.dpi,
+                },
+            )?,
+            PaperCmd::SealCards { args, out } => {
+                let sink = out.sink(true)?;
+                cmd_send::run(
+                    &mut ctx,
+                    &send_opts(&args),
+                    cmd_send::Target::Cards {
+                        sink,
+                        paper: out.paper,
+                        dpi: out.dpi,
+                    },
+                )?
+            }
+            PaperCmd::OpenCards { args } => cmd_receive::run(
+                &mut ctx,
+                &receive_opts(&args, false, false),
+                cmd_receive::Source::Cards,
+            )?,
+            PaperCmd::ShareCards { threshold, out } => {
+                let sink = out.sink(true)?;
+                cmd_paper::share_cards(&mut ctx, &sink, threshold, out.paper, out.dpi)?
+            }
+        },
+        Cmd::Post { file, ttl } => cmd_misc::post(&mut ctx, &file, ttl)?,
+        Cmd::Receive(a) => cmd_receive::run(
+            &mut ctx,
+            &receive_opts(&a, false, false),
+            cmd_receive::Source::Network,
+        )?,
+        Cmd::Open { bucket, args } => cmd_receive::run(
+            &mut ctx,
+            &receive_opts(&args, false, false),
+            cmd_receive::Source::Bucket(&bucket),
+        )?,
         Cmd::Share { cmd } => match cmd {
             ShareCmd::Split { k, n, for_labels } => {
                 if n < k {
@@ -447,9 +689,11 @@ fn run(cli: Cli) -> Result<i32, Fail> {
                 }
                 cmd_misc::share_split(&mut ctx, k, n, &for_labels)?
             }
-            ShareCmd::Combine { args, check_only } => {
-                cmd_receive::run(&mut ctx, &receive_opts(&args, true, check_only), None)?
-            }
+            ShareCmd::Combine { args, check_only } => cmd_receive::run(
+                &mut ctx,
+                &receive_opts(&args, true, check_only),
+                cmd_receive::Source::Network,
+            )?,
         },
         Cmd::Key { cmd } => match cmd {
             KeyCmd::Words => cmd_misc::key(&mut ctx, false, false)?,

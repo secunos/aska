@@ -430,6 +430,20 @@ impl Ctx {
         Ok(first)
     }
 
+    /// Scan a byte-mode QR code (a Block card) with the in-process camera. The helper is not
+    /// used: its text output cannot carry arbitrary bytes.
+    pub fn scan_bytes(&mut self) -> Result<Zeroizing<Vec<u8>>, Fail> {
+        note!("Scanning with the camera — show the card to it (up to 90 s; Ctrl-C stops) …");
+        let opts = aska_scan::ScanOptions::default();
+        aska_scan::scan_bytes(&opts, |_| {}).map_err(|e| match e {
+            aska_scan::ScanError::NoCamera(why) => Fail::new(
+                exit::ERROR,
+                format!("no camera could be read in-process ({why}); Block cards need the built-in camera reader"),
+            ),
+            e => Fail::new(exit::ERROR, e.to_string()),
+        })
+    }
+
     /// Read a line of key material or a `scan` request; `Ok(None)` on an empty line / EOF.
     pub fn read_material(&mut self, prompt: &str) -> Result<Option<term::SecretLine>, Fail> {
         let line = self.input.read_line(prompt)?;

@@ -951,3 +951,386 @@ fn doctor_findings_fire_on_their_triggers_and_stay_silent_otherwise() {
     assert_eq!(dead.status.code(), Some(6));
     assert!(String::from_utf8_lossy(&dead.stdout).contains("[REFUSE]"));
 }
+
+// ---------------------------------------------------------------------------------------------
+// Paper mode (DC-04, release 1.2)
+
+const ROLLS: &str = "3614525316241365214652136415263152461352416352416352461523614526135241635241652314625314625314625362145263";
+
+fn booklet_payloads(b: &Bench, set: &str) -> Vec<String> {
+    let gen = b.aska(
+        &[
+            "paper",
+            "generate",
+            "--source",
+            "dice",
+            "--pages",
+            "1",
+            "--digits",
+            "200",
+            "--set-code",
+            set,
+            "--rows",
+        ],
+        &format!("{ROLLS}\n"),
+    );
+    assert!(gen.ok(), "{}", gen.dump());
+    assert!(gen.stderr.contains("label SEEDED"), "{}", gen.dump());
+    assert!(gen.stderr.contains("all within limits"), "{}", gen.dump());
+    let payloads = gen.fields("PAYLOAD");
+    assert_eq!(payloads.len(), 2, "{}", gen.dump());
+    assert!(gen
+        .stdout
+        .contains(&format!("PAGE {set} A 01 N 200 SEEDED CHECK ")));
+    assert!(gen
+        .stdout
+        .contains(&format!("PAGE {set} B 01 N 200 SEEDED CHECK ")));
+    // Pad rows carry a check digit; key rows A000… and B; device keys R/S.
+    assert!(gen.stdout.contains("\n01  "));
+    assert!(gen.stdout.contains("\nA000  "));
+    assert!(gen.stdout.contains("\nB     "));
+    assert!(gen.stdout.contains("\nR "));
+    payloads
+}
+
+#[test]
+fn paper_generate_encipher_decipher_and_check_page() {
+    let b = Bench::new("paper");
+    let payloads = booklet_payloads(&b, "7342");
+    let page = &payloads[0];
+    assert!(page.chars().all(|c| c.is_ascii_digit()));
+    assert!(page.len() > 600);
+
+    // check-page verifies the checksum; a changed digit is caught.
+    let chk = b.aska(
+        &["paper", "check-page", "--page-from", "typed"],
+        &format!("{page}\n"),
+    );
+    assert!(chk.ok(), "{}", chk.dump());
+    assert!(
+        chk.stdout
+            .contains("PAGE 7342 A 01 N 200 HANDTAG yes CHECK"),
+        "{}",
+        chk.dump()
+    );
+    let mut bad = page.clone().into_bytes();
+    bad[40] = if bad[40] == b'9' { b'0' } else { bad[40] + 1 };
+    let bad = String::from_utf8(bad).unwrap();
+    let chk2 = b.aska(
+        &["paper", "check-page", "--page-from", "typed"],
+        &format!("{bad}\n"),
+    );
+    assert_eq!(chk2.code, 5, "{}", chk2.dump());
+    assert!(
+        chk2.stderr.contains("checksum does not match"),
+        "{}",
+        chk2.dump()
+    );
+
+    // Encipher (padded to the page), both tags printed.
+    let enc = b.aska(
+        &["paper", "encipher", "--page-from", "typed"],
+        &format!("{page}\n\nMEET 14 NOV NORTH GATE\n"),
+    );
+    assert!(enc.ok(), "{}", enc.dump());
+    let cipher = enc.field("CIPHER").unwrap().replace(' ', "");
+    let hand = enc.field("HANDTAG").unwrap();
+    let dev = enc.field("DEVTAG").unwrap();
+    assert!(
+        cipher.len() >= 199 && cipher.len() <= 200,
+        "{}",
+        cipher.len()
+    );
+    assert_eq!(hand.len(), 4);
+    assert_eq!(dev.len(), 19);
+    // Unpadded: the length shows.
+    let enc2 = b.aska(
+        &["paper", "encipher", "--page-from", "typed", "--no-pad"],
+        &format!("{page}\n\nMEET 14 NOV NORTH GATE\n"),
+    );
+    assert!(enc2.ok(), "{}", enc2.dump());
+    assert_eq!(enc2.field("CIPHER").unwrap().replace(' ', "").len(), 33);
+    // Punctuation is refused with the character named.
+    let enc3 = b.aska(
+        &["paper", "encipher", "--page-from", "typed"],
+        &format!("{page}\n\nHi, there\n"),
+    );
+    assert_eq!(enc3.code, 1);
+    assert!(enc3.stderr.contains("','"), "{}", enc3.dump());
+
+    // Decipher with both tags; with only the device tag; with none (warning).
+    for tags in [
+        format!("{hand}\n{dev}\n"),
+        format!("\n{dev}\n"),
+        String::from("\n\n"),
+    ] {
+        let dec = b.aska(
+            &["paper", "decipher", "--page-from", "typed"],
+            &format!("{page}\n\n{cipher}\n{tags}"),
+        );
+        assert!(dec.ok(), "{}", dec.dump());
+        assert_eq!(
+            dec.stdout.trim(),
+            "MEET 14 NOV NORTH GATE",
+            "{}",
+            dec.dump()
+        );
+        if tags == "\n\n" {
+            assert!(dec.stderr.contains("no tag was checked"), "{}", dec.dump());
+        }
+    }
+    // A wrong hand tag, a wrong device tag, and the other page: nothing shown, exit 5.
+    for (c, h, d) in [
+        (cipher.clone(), "0000".to_string(), String::new()),
+        (cipher.clone(), String::new(), format!("{}0", &dev[..18])),
+    ] {
+        let dec = b.aska(
+            &["paper", "decipher", "--page-from", "typed"],
+            &format!("{page}\n\n{c}\n{h}\n{d}\n"),
+        );
+        assert_eq!(dec.code, 5, "{}", dec.dump());
+        assert!(dec.stdout.is_empty(), "{}", dec.dump());
+        assert!(dec.stderr.contains("does not verify"), "{}", dec.dump());
+    }
+    let other = &payloads[1];
+    let dec = b.aska(
+        &["paper", "decipher", "--page-from", "typed"],
+        &format!("{other}\n\n{cipher}\n{hand}\n\n"),
+    );
+    assert_eq!(dec.code, 5, "{}", dec.dump());
+
+    // Worksheet is plain text with the table.
+    let ws = b.aska(&["paper", "worksheet"], "");
+    assert!(ws.ok());
+    assert!(ws.stdout.contains("70 R  71 H") && ws.stdout.contains("10000 = 9973 + 27"));
+
+    // Too few rolls / a non-roll are refused; a bad page size too.
+    let few = b.aska(
+        &[
+            "paper", "generate", "--source", "dice", "--pages", "1", "--rows",
+        ],
+        "123456\n",
+    );
+    assert_eq!(few.code, 1, "{}", few.dump());
+    assert!(few.stderr.contains("at least 100"), "{}", few.dump());
+    let bad = b.aska(
+        &[
+            "paper", "generate", "--source", "dice", "--pages", "1", "--rows",
+        ],
+        "1234567\n",
+    );
+    assert_eq!(bad.code, 1);
+    assert!(bad.stderr.contains("not a die roll"), "{}", bad.dump());
+    let size = b.aska(
+        &[
+            "paper", "generate", "--source", "dice", "--digits", "300", "--rows",
+        ],
+        &format!("{ROLLS}\n"),
+    );
+    assert_eq!(size.code, 1);
+}
+
+#[test]
+fn paper_cover_page_turns_the_ciphertext_innocent() {
+    let b = Bench::new("cover");
+    let page = booklet_payloads(&b, "0101").remove(0);
+    let enc = b.aska(
+        &["paper", "encipher", "--page-from", "typed", "--no-pad"],
+        &format!("{page}\n\nMEET 14 NOV NORTH GATE\n"),
+    );
+    assert!(enc.ok(), "{}", enc.dump());
+    let cipher = enc.field("CIPHER").unwrap();
+    let cover = b.aska(
+        &[
+            "paper",
+            "cover",
+            "--set-code",
+            "0101",
+            "--direction",
+            "A",
+            "--number",
+            "1",
+            "--digits",
+            "200",
+            "--rows",
+        ],
+        &format!("{cipher}\nSEE YOU ON SUNDAY LOVE\n"),
+    );
+    assert!(cover.ok(), "{}", cover.dump());
+    let cover_page = cover.field("PAYLOAD").unwrap();
+    assert!(cover.stdout.contains("PAGE 0101 A 01 N 200"));
+    let dec = b.aska(
+        &["paper", "decipher", "--page-from", "typed"],
+        &format!("{cover_page}\n\n{}\n\n\n", cipher.replace(' ', "")),
+    );
+    assert!(dec.ok(), "{}", dec.dump());
+    assert_eq!(
+        dec.stdout.trim(),
+        "SEE YOU ON SUNDAY LOVE",
+        "{}",
+        dec.dump()
+    );
+    // Lengths must match.
+    let wrong = b.aska(
+        &[
+            "paper",
+            "cover",
+            "--set-code",
+            "0101",
+            "--direction",
+            "A",
+            "--number",
+            "1",
+            "--rows",
+        ],
+        &format!("{cipher}\nHELLO\n"),
+    );
+    assert_eq!(wrong.code, 1);
+    assert!(wrong.stderr.contains("must match"), "{}", wrong.dump());
+}
+
+#[test]
+fn paper_block_cards_seal_and_open() {
+    let b = Bench::new("cards");
+    let sealed = b.aska(
+        &["--relay", ONION, "paper", "seal-cards", "--rows"],
+        "hello paper world\n",
+    );
+    assert!(sealed.ok(), "{}", sealed.dump());
+    let cards = sealed.fields("CARD");
+    assert_eq!(cards.len(), 4, "{}", sealed.dump());
+    assert!(cards[0].starts_with("1/4 "));
+    let key = sealed.field("KEYCARD").unwrap();
+    assert_eq!(b.relay.store.lock().unwrap().counts(), [0, 0, 0]); // nothing posted
+    let card_lines: String = sealed
+        .stdout
+        .lines()
+        .filter(|l| l.starts_with("CARD "))
+        .map(|l| format!("{l}\n"))
+        .collect();
+    // Any order; a duplicate is tolerated.
+    let shuffled: String = {
+        let mut v: Vec<&str> = card_lines.lines().collect();
+        v.reverse();
+        v.insert(1, v[0]); // a duplicate before the set completes
+        v.iter().map(|l| format!("{l}\n")).collect()
+    };
+    let opened = b.aska(&["paper", "open-cards"], &format!("{shuffled}{key}\n\n\n"));
+    assert!(opened.ok(), "{}", opened.dump());
+    assert!(
+        opened.stdout.contains("hello paper world"),
+        "{}",
+        opened.dump()
+    );
+    assert!(
+        opened.stderr.contains("Already have that card"),
+        "{}",
+        opened.dump()
+    );
+    // The wrong key opens nothing (exit 5); a damaged card is refused and the set stays
+    // incomplete (exit 1); a class-3 note cannot go on paper.
+    let other = b.aska(
+        &["--relay", ONION, "paper", "seal-cards", "--rows"],
+        "another\n",
+    );
+    let other_key = other.field("KEYCARD").unwrap();
+    let wrong = b.aska(
+        &["paper", "open-cards"],
+        &format!("{card_lines}{other_key}\n\n\n"),
+    );
+    assert_eq!(wrong.code, 5, "{}", wrong.dump());
+    let mut damaged = card_lines.clone();
+    let i = damaged.find("1/4 ").unwrap() + 30;
+    let ch = damaged.as_bytes()[i];
+    damaged.replace_range(i..i + 1, if ch == b'0' { "1" } else { "0" });
+    let dmg = b.aska(&["paper", "open-cards"], &format!("{damaged}{key}\n\n\n"));
+    assert_eq!(dmg.code, 1, "{}", dmg.dump());
+    assert!(
+        dmg.stderr.contains("did not scan cleanly"),
+        "{}",
+        dmg.dump()
+    );
+    let big = b.aska(
+        &[
+            "--relay",
+            ONION,
+            "paper",
+            "seal-cards",
+            "--class",
+            "3",
+            "--rows",
+        ],
+        "x\n",
+    );
+    assert_eq!(big.code, 1, "{}", big.dump());
+    assert!(big.stderr.contains("class 3"), "{}", big.dump());
+}
+
+#[test]
+fn paper_sheets_ps_pbm_and_print_rules() {
+    let b = Bench::new("sheets");
+    let ps = b.aska(
+        &[
+            "paper", "generate", "--source", "dice", "--pages", "1", "--digits", "200", "--ps",
+        ],
+        &format!("{ROLLS}\n"),
+    );
+    assert!(ps.ok(), "{}", ps.dump());
+    assert!(
+        ps.stdout.starts_with("%!PS-Adobe-3.0\n%%Pages: 4\n"),
+        "{}",
+        &ps.stdout[..60]
+    );
+    assert_eq!(ps.stdout.matches("showpage").count(), 4); // 2 pages × 2 copies
+    let pbm = b.aska(
+        &[
+            "paper", "generate", "--source", "dice", "--pages", "1", "--digits", "200", "--copies",
+            "1", "--pbm",
+        ],
+        &format!("{ROLLS}\n"),
+    );
+    assert!(pbm.ok(), "{}", pbm.dump());
+    assert!(
+        pbm.stdout.starts_with("P4\n1240 1754\n"),
+        "{}",
+        &pbm.stdout[..20]
+    );
+    assert_eq!(pbm.stdout.matches("P4\n").count(), 2);
+    // Printing a pad without the rules acknowledged is refused before anything is generated.
+    let pr = b.aska(
+        &[
+            "paper", "generate", "--source", "dice", "--pages", "1", "--print", "lp0",
+        ],
+        &format!("{ROLLS}\n"),
+    );
+    assert_eq!(pr.code, 1, "{}", pr.dump());
+    assert!(pr.stderr.contains("i-have-read-the-rules"), "{}", pr.dump());
+    assert!(!pr.stderr.contains("Booklet"), "{}", pr.dump());
+    // Share cards as text and as sheets; Block cards as PostScript.
+    let shares = "askas1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l\naskas1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7m\n";
+    let sc = b.aska(
+        &["paper", "share-cards", "--rows", "--threshold", "2"],
+        shares,
+    );
+    assert!(sc.ok(), "{}", sc.dump());
+    assert!(
+        sc.stdout
+            .contains("SHARE 1 OF 2 — ANY 2 OPEN THE NOTE\naska s1qp zry9"),
+        "{}",
+        sc.dump()
+    );
+    let sc_ps = b.aska(&["paper", "share-cards", "--ps"], shares);
+    assert!(sc_ps.ok(), "{}", sc_ps.dump());
+    assert!(sc_ps.stdout.contains("%%Pages: 2\n"));
+    let cards_ps = b.aska(&["--relay", ONION, "paper", "seal-cards", "--ps"], "x\n");
+    assert!(cards_ps.ok(), "{}", cards_ps.dump());
+    assert!(cards_ps.stdout.contains("%%Pages: 1\n"));
+    assert!(cards_ps.field("KEYCARD").is_some());
+    // An output must be chosen for generate.
+    let none = b.aska(
+        &["paper", "generate", "--source", "dice", "--pages", "1"],
+        &format!("{ROLLS}\n"),
+    );
+    assert_eq!(none.code, 1);
+    assert!(none.stderr.contains("choose an output"), "{}", none.dump());
+}

@@ -81,8 +81,25 @@ impl Default for ScanOptions {
 /// greyscale copy of frames as they arrive (for a viewfinder); it runs on the calling thread.
 pub fn scan(
     opts: &ScanOptions,
-    mut on_preview: impl FnMut(Preview),
+    on_preview: impl FnMut(Preview),
 ) -> Result<Zeroizing<String>, ScanError> {
+    scan_with(opts, on_preview, decode_luma)
+}
+
+/// Like [`scan`], for QR codes carrying bytes rather than text (Block cards, DC-04 §7): the
+/// first symbol that decodes to at least one byte is returned as is.
+pub fn scan_bytes(
+    opts: &ScanOptions,
+    on_preview: impl FnMut(Preview),
+) -> Result<Zeroizing<Vec<u8>>, ScanError> {
+    scan_with(opts, on_preview, decode_luma_bytes)
+}
+
+fn scan_with<T>(
+    opts: &ScanOptions,
+    mut on_preview: impl FnMut(Preview),
+    decode: fn(usize, usize, &[u8]) -> Option<T>,
+) -> Result<T, ScanError> {
     let cam = open_any(opts.device.as_deref())?;
     let (w, h, fourcc) = (cam.width() as usize, cam.height() as usize, cam.fourcc());
     let deadline = Instant::now() + opts.timeout;
@@ -106,7 +123,7 @@ pub fn scan(
         if opts.preview_size > 0 {
             on_preview(downscale(w, h, &luma, opts.preview_size));
         }
-        if let Some(text) = decode_luma(w, h, &luma) {
+        if let Some(text) = decode(w, h, &luma) {
             luma.zeroize();
             return Ok(text);
         }
@@ -189,6 +206,20 @@ pub fn decode_luma(w: usize, h: usize, luma: &[u8]) -> Option<Zeroizing<String>>
     None
 }
 
+/// Find and decode one QR code in a greyscale image as raw bytes (byte-mode symbols such as
+/// Block cards). The first grid that decodes to at least one byte wins.
+pub fn decode_luma_bytes(w: usize, h: usize, luma: &[u8]) -> Option<Zeroizing<Vec<u8>>> {
+    let mut img = rqrr::PreparedImage::prepare_from_greyscale(w, h, |x, y| luma[y * w + x]);
+    let grids = img.detect_grids();
+    for g in grids {
+        let mut out: Zeroizing<Vec<u8>> = Zeroizing::new(Vec::new());
+        if g.decode_to(&mut *out).is_ok() && !out.is_empty() {
+            return Some(out);
+        }
+    }
+    None
+}
+
 /// Nearest-neighbour downscale so the longest side is `max_side`.
 pub fn downscale(w: usize, h: usize, luma: &[u8], max_side: u32) -> Preview {
     let max_side = max_side.max(1) as usize;
@@ -216,7 +247,7 @@ mod tests {
     /// a quiet zone, placed at (`ox`, `oy`) in a `w × h` grey background, with `noise`
     /// (0–255) of pseudo-random speckle so the decoder is not handed a perfect bitmap.
     fn frame(
-        text: &str,
+        text: &[u8],
         w: usize,
         h: usize,
         scale: usize,
@@ -224,7 +255,7 @@ mod tests {
         oy: usize,
         noise: u8,
     ) -> Vec<u8> {
-        let code = QrCode::with_error_correction_level(text.as_bytes(), EcLevel::M).unwrap();
+        let code = QrCode::with_error_correction_level(text, EcLevel::M).unwrap();
         let n = code.width();
         let mut img = vec![0x90u8; w * h];
         let mut seed = 0x9e37_79b9u32;
@@ -270,21 +301,38 @@ mod tests {
             .chain(std::iter::repeat_n(bech, 3))
             .collect();
         for (text, scale) in [(share.as_str(), 6), (card.as_str(), 4)] {
-            let img = frame(text, 640, 480, scale, 40, 30, 40);
+            let img = frame(text.as_bytes(), 640, 480, scale, 40, 30, 40);
             let got = decode_luma(640, 480, &img).expect("decoded");
             assert_eq!(got.as_str(), text);
         }
         // Upper-case alphanumeric mode (what the clients' QR renderer uses).
         let upper = card.to_uppercase();
-        let img = frame(&upper, 640, 480, 4, 20, 20, 30);
+        let img = frame(upper.as_bytes(), 640, 480, 4, 20, 20, 30);
         assert_eq!(decode_luma(640, 480, &img).unwrap().as_str(), upper);
         // A receiving key: large; rendered at 2 px per module in a 1280×960 frame.
         let rk: String = std::iter::once("askar1")
             .chain(std::iter::repeat_n(bech, 70))
             .collect::<String>()
             .to_uppercase();
-        let img = frame(&rk, 1280, 960, 2, 100, 60, 10);
+        let img = frame(rk.as_bytes(), 1280, 960, 2, 100, 60, 10);
         assert_eq!(decode_luma(1280, 960, &img).unwrap().as_str(), rk);
+    }
+
+    #[test]
+    fn decodes_byte_mode_block_cards() {
+        // A Block card (DC-04 §7): 1 035 random bytes in byte mode, EC-L in the clients; here
+        // EC-M at 3 px per module in a 640×480 frame still fits (version ~33, 149 modules).
+        let mut chunk = vec![0u8; 1035];
+        let mut seed = 12345u32;
+        for b in chunk.iter_mut() {
+            seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
+            *b = (seed >> 16) as u8;
+        }
+        let img = frame(&chunk, 640, 480, 3, 30, 10, 20);
+        let got = decode_luma_bytes(640, 480, &img).expect("decoded bytes");
+        assert_eq!(&got[..], &chunk[..]);
+        // Text decoding of random bytes fails (not UTF-8) rather than returning garbage.
+        assert!(decode_luma(640, 480, &img).is_none());
     }
 
     #[test]

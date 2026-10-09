@@ -348,6 +348,74 @@ pub fn render_page(
     Ok(r)
 }
 
+/// Block cards: the chunks of one Block as QR codes, four to a sheet (two by two), each with
+/// its caption "CARD i OF n". Byte mode, error correction L.
+pub fn render_block_cards(
+    chunks: &[impl AsRef<[u8]>],
+    opts: &RenderOptions,
+) -> Result<Vec<Raster>, crate::PaperError> {
+    let (w, h) = opts.paper.pixels(opts.dpi);
+    let sc = opts.scale;
+    let n = chunks.len();
+    let mut sheets = Vec::new();
+    for (sheet_i, group) in chunks.chunks(4).enumerate() {
+        let mut r = Raster::new(w, h);
+        let (cw, ch) = ((w - 2 * opts.margin) / 2, (h - 2 * opts.margin) / 2);
+        for (k, chunk) in group.iter().enumerate() {
+            let m = qr::encode_bytes(chunk.as_ref())
+                .map_err(|_| crate::PaperError::Card("card too large for a QR code"))?;
+            let modules = m.size() + 8;
+            let module = ((cw.min(ch) - GLYPH_H * sc - 20) / modules).clamp(1, 6);
+            let (cx, cy) = (opts.margin + (k % 2) * cw, opts.margin + (k / 2) * ch);
+            let caption = format!("CARD {} OF {n}", sheet_i * 4 + k + 1);
+            r.text(cx + 4 * module, cy, sc, caption.as_bytes());
+            r.qr(
+                cx + 4 * module,
+                cy + GLYPH_H * sc + 10 + 4 * module,
+                module,
+                &m,
+            );
+        }
+        sheets.push(r);
+    }
+    Ok(sheets)
+}
+
+/// A Share card: the Share as an alphanumeric QR with its caption and the grouped text under
+/// it (DC-04 §7.2). One card per sheet.
+pub fn render_share_card(
+    share_text: &str,
+    index: u8,
+    total: u8,
+    threshold: u8,
+    opts: &RenderOptions,
+) -> Result<Raster, crate::PaperError> {
+    let (w, h) = opts.paper.pixels(opts.dpi);
+    let sc = opts.scale;
+    let line = GLYPH_H * sc + 6 * sc / 2 + 2;
+    let mut r = Raster::new(w, h);
+    let m = qr::encode(share_text)
+        .map_err(|_| crate::PaperError::Card("share too large for a QR code"))?;
+    let caption = format!("SHARE {index} OF {total} - ANY {threshold} OPEN THE NOTE");
+    let mut y = opts.margin;
+    r.text(opts.margin, y, sc + 1, caption.as_bytes());
+    y += GLYPH_H * (sc + 1) + 20;
+    let modules = m.size() + 8;
+    let avail = (w - 2 * opts.margin).min(h / 2);
+    let module = (avail / modules).clamp(2, 8);
+    r.qr(opts.margin + 4 * module, y + 4 * module, module, &m);
+    y += modules * module + 20;
+    let text = crate::cards::share_card_text(share_text, index, total, threshold);
+    for l in text.lines().skip(1) {
+        r.text(opts.margin, y, sc, l.as_bytes());
+        y += line;
+        if y + line > h - opts.margin {
+            break;
+        }
+    }
+    Ok(r)
+}
+
 /// Rows of a page as plain text lines for the terminal or the hand-copy view (no header).
 pub fn page_rows_text(page: &Page) -> Vec<LockedBuf> {
     let mut out = Vec::new();
@@ -449,6 +517,62 @@ mod tests {
                 assert_eq!(q.canonical(), p.canonical());
             }
         }
+    }
+
+    #[test]
+    fn block_and_share_cards_render_and_decode() {
+        let mut block = vec![0u8; 4096];
+        getrandom::getrandom(&mut block).unwrap();
+        let chunks = crate::cards::split_block(&block).unwrap();
+        let sheets = render_block_cards(&chunks, &RenderOptions::default()).unwrap();
+        assert_eq!(sheets.len(), 1);
+        // Each of the four codes on the sheet decodes to its chunk (one grid per quadrant).
+        let r = &sheets[0];
+        let (w, h) = (r.width(), r.height());
+        let mut luma = vec![255u8; w * h];
+        for y in 0..h {
+            for x in 0..w {
+                if r.get(x, y) {
+                    luma[y * w + x] = 0;
+                }
+            }
+        }
+        let mut img = rqrr_decode_all(w, h, &luma);
+        img.sort();
+        let mut want: Vec<Vec<u8>> = chunks.iter().map(|c| c.to_vec()).collect();
+        want.sort();
+        assert_eq!(img, want);
+        let big = vec![1u8; 16384];
+        assert_eq!(
+            render_block_cards(
+                &crate::cards::split_block(&big).unwrap(),
+                &RenderOptions::default()
+            )
+            .unwrap()
+            .len(),
+            4
+        );
+        let card = render_share_card(
+            "askas1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l",
+            2,
+            5,
+            3,
+            &RenderOptions::default(),
+        )
+        .unwrap();
+        assert!(card.rows().iter().any(|&b| b != 0));
+    }
+
+    fn rqrr_decode_all(w: usize, h: usize, luma: &[u8]) -> Vec<Vec<u8>> {
+        // Several codes on one sheet: decode every grid rqrr finds.
+        let mut img = rqrr::PreparedImage::prepare_from_greyscale(w, h, |x, y| luma[y * w + x]);
+        img.detect_grids()
+            .iter()
+            .filter_map(|g| {
+                let mut out = Vec::new();
+                g.decode_to(&mut out).ok().map(|_| out)
+            })
+            .collect()
     }
 
     #[test]

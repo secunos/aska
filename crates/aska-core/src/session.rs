@@ -1427,6 +1427,47 @@ impl Session {
         }
     }
 
+    /// Take one Block handed over directly — read from Block cards (DC-04 §7) — as if it had
+    /// been matched in a bucket. There is no relay label to compare: with key material the
+    /// Session's own label stands, and on the receiving-key path the Block's KEM region is
+    /// decapsulated to the root; in both cases the open decides whether the key fits.
+    pub fn accept_block(&mut self, block: Vec<u8>) -> Result<(), SessionError> {
+        let r = self.accept_block_inner(Zeroizing::new(block));
+        scrub_stack();
+        r
+    }
+
+    #[inline(never)]
+    fn accept_block_inner(&mut self, block: Zeroizing<Vec<u8>>) -> Result<(), SessionError> {
+        self.touch()?;
+        self.require(&[State::Collecting, State::Fetched])?;
+        if SizeClass::from_len(block.len()).is_none() {
+            return Err(SessionError::Format(Error::BadLength));
+        }
+        if let Some(seed) = self.seed.as_ref() {
+            let mut bytes = Zeroizing::new([0u8; xwing::SEED_LEN]);
+            bytes.copy_from_slice(seed.as_slice());
+            let expanded = xwing::Expanded::from_seed(&bytes);
+            let region: &[u8; KEM_LEN] = block[KEM_OFF..KEM_OFF + KEM_LEN]
+                .try_into()
+                .expect("length checked");
+            let ss = expanded.decapsulate(region);
+            let root = xwing::root_from_shared_secret(&ss);
+            let buf = self.lock(root.as_bytes())?;
+            let label = secret32(crate::kdf::derive_label(&root));
+            drop(root);
+            if let Some(mut old) = self.root.replace(buf) {
+                old.clear();
+            }
+            self.label = Some(label);
+        } else if self.label.is_none() {
+            return Err(SessionError::WrongState(self.state));
+        }
+        self.block = Some(block);
+        self.state = State::Fetched;
+        Ok(())
+    }
+
     /// Blocking convenience: `fetch_job().run()` + `accept_fetch`.
     pub fn check_drops(&mut self) -> Result<bool, SessionError> {
         let r = self.check_drops_inner();
