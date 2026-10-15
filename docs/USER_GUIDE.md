@@ -1,10 +1,10 @@
 # Aska — User Guide
 
-## Version 1.1 — for Aska 1.1.0 (Linux x86-64)
+## Version 1.2 — for Aska 1.2.0 (Linux x86-64)
 
-Aska sends a short note to one person, or to a small group, in a way that leaves nothing behind. The note is encrypted on your computer, parked as unreadable noise on a relay that is reachable only through Tor, fetched by the receiver, shown on their screen, and gone. Aska keeps no history, no contacts, no account, no log, and writes nothing to disk unless you ask it to.
+Aska sends a short note to one person, or to a small group, in a way that leaves nothing behind. The note is encrypted on your computer, parked as unreadable noise on a relay that is reachable only through Tor, fetched by the receiver, shown on their screen, and gone. Aska keeps no history, no contacts, no account, no log, and writes nothing to disk unless you ask it to. Since 1.2 it can also make a **one-time pad on paper**, for messages that must be exchanged with no computer at all (chapter 11).
 
-This guide tells you what you need, how to check that the copy you have is the real one, how to install it, how to send and receive, and — just as important — what Aska does **not** protect you against. Read the last part even if you skip the rest.
+This guide tells you what you need, how to check that the copy you have is the real one, how to install it, how to send and receive, and — just as important — what Aska does **not** protect you against. Read section 9 even if you skip the rest.
 
 ---
 
@@ -14,7 +14,7 @@ This guide tells you what you need, how to check that the copy you have is the r
 
 **What Aska cannot do.** It cannot protect a note from the person you send it to, from a camera pointed at the screen, or from a computer that is already compromised by someone else. It cannot stop you from saving a key to a file or reading the words over a channel that is being listened to. It cannot make Tor work on a network that blocks Tor. These limits are spelled out in section 9; the short version is that Aska protects the *message* and the *trail* — the two ends are yours to protect.
 
-**The status of this release.** Aska 1.1.0 (1.0 plus the 1.1 features: stored receiving keys, in-app camera, a note viewer that keeps the note out of the toolkit, and hardening) has been through the project's own internal security review (its report is published with the source) and the gates listed in the release record. It has **not** been reviewed by an independent security auditor, and it has not had a legal review in any jurisdiction. The owner of the project chose to release it on that basis. If your safety depends on this software, weigh that fact.
+**The status of this release.** Aska 1.2.0 (1.1 plus the paper mode of chapter 11: one-time pad booklets with a hand-computable tag, Block cards and Share cards) builds on the project's own internal security review of 1.0 (its report is published with the source; the paper mode added in 1.2 has had the project's tests and gates, not a review pass) and has passed the gates listed in the release record. It has **not** been reviewed by an independent security auditor, and it has not had a legal review in any jurisdiction. The owner of the project chose to release it on that basis. If your safety depends on this software, weigh that fact.
 
 ---
 
@@ -28,9 +28,10 @@ This guide tells you what you need, how to check that the copy you have is the r
 | Tor | A Tor running on your computer. Either the system `tor` package (`sudo apt install tor`, it listens on port 9050) or Tor Browser (its Tor listens on port 9150 while the browser is open). Tails and Whonix provide Tor already. |
 | A relay | The `.onion` address of an Aska relay. Your circle runs one or knows one (the Relay Operator Guide explains how to run one). Aska ships with no relay built in. |
 | Optional: a camera | To read Key Card QR codes from another screen or from paper. Since 1.1 Aska reads the camera itself (a webcam that offers an uncompressed picture, which nearly all do); on Debian and Ubuntu your user must be in the `video` group (`sudo usermod -aG video $USER`, then log out and in). If no camera can be read that way, Aska falls back to the `zbarcam` helper from `zbar-tools` when it is installed. Pasting or typing works without any camera. |
+| Optional: for paper mode | Water-soluble paper, a water-soluble pen, a glass to write on; a camera for a PHYSICAL booklet; and, only to print pad pages, a USB inkjet or monochrome laser printer — see chapter 11. |
 | Not swap | Swap should be off, or Aska will warn at every start that a note *could* reach the disk. Section 3.4 shows how. Tails has no swap. |
 
-Aska never needs root. It installs into your own home folder and can be removed by deleting a handful of files there (section 12).
+Aska never needs root. It installs into your own home folder and can be removed by deleting a handful of files there (section 13).
 
 ---
 
@@ -257,7 +258,8 @@ The gear opens **Settings**.
 8. **Reused receiving keys.** Whoever learns the seed reads every note still on the relay for that key. Create a new key after each use.
 9. **Compelled disclosure.** The decoy and distress features give you a plausible note to show and a way to destroy the real one. Whether using them is lawful where you are has not been reviewed by this project. Destroying evidence can be a crime.
 10. **Statistical observation of a relay.** An observer who collects a very large number of Blocks from one relay could, in principle, estimate what fraction were sent to receiving keys — never which ones, and never their contents. Accepted for 1.0 and documented for review.
-11. **The 1.0 releases have not been independently audited.** See section 1.
+11. **No release has been independently audited.** See section 1.
+12. **Paper handling.** A pad page that was photographed, copied "for safety", written on a pad of paper that took the impression, or used twice has lost the proof that makes it worth having; the booklet is a physical object that can be found. Chapter 11 is a list of handling rules for this reason.
 
 Rules of thumb: use Tails for anything that matters; set short TTLs; use a passphrase when the key crosses a channel you do not fully trust; never save key material; burn the note as soon as you have read it; confirm the check for receiving keys; and **never install an update because software told you one exists** — Aska will never tell you to, and a message claiming to be from Aska that does is a lie. Get the new fingerprint from your trusted source and repeat section 3.
 
@@ -283,7 +285,107 @@ Receiving mirrors it: `aska drop get <onion> --class N --out bucket.bin` in the 
 
 ---
 
-# 11. The command-line client
+# 11. Paper mode (1.2)
+
+Everything before this chapter needs a computer at the moment of use. Paper mode is for the case where there is none you trust — or none at all — at that moment: two people who met once, and who afterwards exchange short messages by writing digits on anything (a postcard, a chat, a classified advertisement, a wall) that nobody can read without the paper they both hold. It is the oldest method in this field and the only one with a mathematical proof: a **one-time pad**. The computer's part is done beforehand, in making the pad, and it can be done without the computer touching the message ever again.
+
+The proof has conditions, and every rule in this chapter is one of them: the pad digits must be truly random, each page must be used **once**, both copies must be kept out of other hands, and a page must be **destroyed** after use. The cipher does not fail on mathematics; it fails on handling. Read this chapter whole before the first booklet, and print the **worksheet** (section 11.6) — it carries the method so that nothing has to be remembered.
+
+**What paper mode is not.** It is slow: a short sentence takes ten minutes to encipher by hand and a quarter of an hour more for the hand tag. It carries letters, digits and spaces only. It does not hide *that* two people communicate, only *what*. And a booklet is a physical object that can be found, so the deniability of the rest of Aska (a Block that looks like noise, a decoy note) is replaced by a different kind: for any message on a page there is a page that turns the same digits into any other message of the same length (section 11.7).
+
+## 11.1 What you need
+
+A copy of Aska for the two people — one computer is enough, the booklet is made once — and, depending on how the pages leave the computer: a **camera** (a webcam) if the booklet is to be PHYSICAL (section 11.2); **water-soluble paper** (sold as "dissolving paper" or "spy paper" in notebook and sheet form) or, failing that, any paper and a way to burn it; a **water-soluble pen** (a fountain pen, roller ball or felt pen with water-based ink — not a ballpoint, not a permanent marker) or a soft pencil; a **glass or hard smooth surface** to write on, never a pad of paper; and, only if pages are to be printed, a **USB printer** that meets the rule in section 11.4. A pair of dice helps when there is no camera.
+
+## 11.2 Making a booklet
+
+Press **Paper** on the home screen. The top group makes a booklet.
+
+A **booklet** is a set of pages with one four-digit **set code**. Half the pages are **A-pages**, half **B-pages**: the holder who takes the A role sends with A-pages in order, the other with B-pages, so that both can never use the same page and a received message always names the page it needs ("7342 A 03" is page 3 of set 7342 for A's messages). Each holder gets a complete copy — both halves. The default is ten pages per direction; choose fewer for a short acquaintance. Each page holds **200, 400 or 600 pad digits** (400 by default): a 400-digit page carries a message of about 250 letters, a long paragraph. **Hand-tag keys** are on by default; they double the page and give the receiver a four-digit check that the message arrived unaltered and from the matching page (section 11.3). Leave them off only for a booklet that will be used by devices alone.
+
+**Randomness source.** This is the single choice that decides what the booklet is worth.
+
+- **Camera sensor noise — PHYSICAL.** Cover the lens with your thumb or a cap and press *Make the booklet*; Aska reads the camera for some seconds and keeps the least significant bits of the dark frames, measures how unpredictable they are with the health tests of NIST SP 800-90B, and compresses them into pad digits with a safety margin. If the measured randomness is not enough for the whole booklet, Aska says so and makes nothing. The label **PHYSICAL** on every page means: this pad came from a physical process and has the proof — as far as the measurement holds, which is a statement about the camera, not about mathematics. Cameras differ; a camera that gives unusually "clean" frames yields fewer digits per second, never worse digits. *The camera path is new in 1.2 and has been exercised on development machines only; the first run on your camera is a test — see the facts line under the result.*
+- **Die rolls — SEEDED.** Roll a die and press its face on the on-screen pad, at least a hundred times. **Keyboard timing — SEEDED.** Type anything into the field for a while; only the intervals between keys are kept, the text is discarded as it arrives. Neither can supply a booklet's worth of randomness (a booklet needs about eighty thousand bits; a hundred rolls give two hundred and fifty): they **seed** a generator (SHAKE256 with fresh operating-system randomness mixed in), and the booklet is marked **SEEDED (computational, no proof)**. Such a pad is as strong as the generator, which is strong — but it is a different claim from the one-time pad's, and the page says which claim it makes.
+
+The **set code** is random unless you type one (two booklets for two different partners must differ). Press **Make the booklet**. The result line reports the set code, the number of pages, the label, the source and that the digits passed the statistical tests (digit frequencies, serial pairs, repeats and runs; a booklet that fails them is discarded and made again).
+
+The booklet now exists only on the screen. It leaves the computer in one of two ways, and **leaving this page forgets it**:
+
+**Show for copying…** shows the booklet one row at a time in Aska's locked viewer — fifty pad digits in groups of five, the row number at the left and a **check digit** at the right (the last digit of the sum of the row's digits) — then the hand-tag key rows, then the device keys. Copy each row by hand onto soluble paper, on glass, in water-soluble ink, **twice** (one copy per holder), and add up each row to confirm the check digit before pressing *Next row*; there is no way back. A page's QR code is shown first, so that a second trusted device can scan the page instead of a person copying it (section 11.5). Copying a 400-digit page with keys is about 1 300 digits and takes an hour; a 200-digit page without hand-tag keys is 250 digits. Hand copy is the recommended path: no printer, no spool, no toner (section 11.4).
+
+**Print…** opens Aska's own print dialog — not the system's — which lists the printers the local print system knows and applies the printing rule (section 11.4) before anything is sent. The checklist in the dialog must be ticked line by line. Two copies of every page are printed.
+
+Then **Forget the booklet**, and check that the two copies are complete and identical before you part. Each holder keeps one, as they would keep cash.
+
+## 11.3 Sending and receiving by hand
+
+This is the part done without a computer. The worksheet (section 11.6) carries the same steps with a worked example; what follows is the method in words.
+
+**The table.** Letters become digits with a fixed, public table — the security is in the pad, not the table. Seven frequent letters take one digit each; every other symbol takes two, and the first digit of a pair is always 7, 8 or 9, so the digits can be read back without separators (a 0–6 is a letter by itself; a 7, 8 or 9 takes the next digit with it).
+
+| | | | | | | | | | |
+|---|---|---|---|---|---|---|---|---|---|
+| **0** E | **1** T | **2** A | **3** O | **4** I | **5** N | **6** S | | | |
+| **70** R | **71** H | **72** L | **73** D | **74** C | **75** U | **76** M | **77** F | **78** P | **79** G |
+| **80** W | **81** Y | **82** B | **83** V | **84** K | **85** X | **86** J | **87** Q | **88** Z | **89** space |
+| **90** 0 | **91** 1 | **92** 2 | **93** 3 | **94** 4 | **95** 5 | **96** 6 | **97** 7 | **98** 8 | **99** 9 |
+
+Capitals only; write AA for Å, AE for Ä, OE for Ö; drop other accents; write punctuation as words (STOP, COMMA) or leave it out. `MEET 14 NOV` is 76 0 0 1 89 91 94 89 5 3 83 — 18 digits.
+
+**Sender.** Take the next unused page of your own direction. Write the message digits in a row, in groups of five (row M). Under them write the page's pad digits from the first digit of row 01, one under each (row K). Add each column and keep only the last digit: 7 + 5 = 12 → 2 (row C). Row C is the ciphertext. If the page has hand-tag keys, compute the **hand tag** (below) and write its four digits after the ciphertext. Send the digits — any channel will do, because the digits reveal nothing but their count; if even the length should say nothing, add spaces (code 89) at the end of the message first. Then destroy the page and the sheet you worked on (section 11.4).
+
+**Receiver.** Find the page the sender used (your copy of the same set, direction and number). If a hand tag came with the message, **recompute it first** from the received digits with that page's keys; if it differs, the message was altered in transit, a digit was lost, or it is the wrong page — stop and ask for a repeat. Then write the received digits as row C, the pad digits as row K, and subtract each column, adding 10 when the result would be negative: 2 − 5 → 12 − 5 = 7 (row M). Read row M back through the table. Destroy the page and the working sheet.
+
+**The hand tag.** Cut row C into pairs from the left (G₁ G₂ …; an odd last digit is a group by itself) and count the digits (L). From the page's key rows take a₀, a₁, a₂, … (four digits each, in order) and B, the last. Compute the sum a₀·L + a₁·G₁ + a₂·G₂ + … + B with ordinary arithmetic. Then reduce it: while the sum is 9 973 or more, split it into its last four digits R and the rest Q, and replace it by R + 27·Q (because 10 000 = 9 973 + 27). The result, written as four digits, is the tag. Anyone who changes a single digit of the ciphertext, or uses another page's keys, gets a different tag with probability 9 972 in 9 973 — not because the arithmetic is hard but because the keys are random and used once. A 33-digit message takes about fifteen minutes with the worksheet's grid.
+
+**Pace and errors.** Work in fives, check each row's digit sum when copying, and read the ciphertext back once before sending it. A single wrong digit in the pad produces a single wrong letter (or a wrong pair) in the message, not gibberish throughout, so most errors are recoverable by the reader; a wrong digit in the hand tag is caught by the tag.
+
+## 11.4 Paper, printers and destruction
+
+**Writing.** On a single sheet on glass or another hard, smooth surface — never on a pad or a stack of paper, where the pen leaves an impression on the sheets beneath. Soft pencil or water-soluble ink. Never photograph a page; never type it into anything but Aska. The examiner's finds in this field were impressions, photographs and "backup" copies, not broken ciphers.
+
+**Printing a pad page — the rule.** Aska prints a pad only when all of the following hold, and refuses otherwise with the reason: the print system's **spool directory is on volatile storage** (a tmpfs or ramfs — on Tails, the amnesic root — so that the job file never touches a disk; the print system otherwise keeps a copy of the job even after it reports it deleted); the printer is a **local USB printer** (a network or shared printer receives the job in clear and may keep it; "print to PDF" is a file); and the **checklist** is ticked: soluble paper loaded, a USB inkjet or monochrome laser (never a colour laser — they print invisible tracking dots on every page; never a printer with a network port or a hard disk), radios off, nobody else at the output tray, and you know how the page is destroyed. On Tails the spool is volatile. On Debian or Ubuntu it is on the disk; for a session that must print pads, with swap off:
+
+```bash
+sudo systemctl stop cups
+sudo mount -t tmpfs -o size=64m,mode=0710,uid=root,gid=lp tmpfs /var/spool/cups
+sudo systemctl start cups
+# … print …
+sudo systemctl stop cups && sudo umount /var/spool/cups && sudo systemctl start cups
+```
+
+Aska's print dialog bypasses the toolkit's print path (which writes the job to a temporary file first) and submits the job to the local print system directly from locked memory, under the fixed job name "Document". What it cannot prevent, and tells you after printing: the print system's logs (`/var/log/cups/`) and the printer's own page counter still record that a job of so many pages was printed at that time. Clear the logs if your system keeps them (`sudo sh -c ': > /var/log/cups/page_log'`, likewise `error_log` and `access_log`) and power-cycle the printer, which empties its memory.
+
+**Which printer, if any.** In order of preference: **hand copy** from the screen (no printer); a **dye-ink inkjet** on soluble paper that tolerates it (test a sheet first — some soluble papers blot); a **monochrome laser** last, because of what follows. The printer should be simple — no hard disk, no network, bought for cash, used only for this. A surviving sheet can be matched to the printer that made it by its mechanical defects.
+
+**Destruction.** A page is destroyed immediately after its one use, together with the working sheet. Soluble paper into water, and **stir until no fragment remains**. If the page was **laser-printed**, know that the toner does not dissolve: it floats as a film that is still legible after a night in the glass — break it up by stirring, pour the water through a fine sieve or straight down a drain with running water, and never leave the glass standing. Hand-written or inkjet pages disintegrate with the paper. Ordinary paper: cross-cut shred to dust or burn and stir the ash; shredding alone is not destruction.
+
+## 11.5 Using a page on a device
+
+The lower group of the Paper page, **Use a pad page**, does the arithmetic for you on a trusted device — a Tails stick, say — and adds a second, machine-strength check. **Scan a page…** reads the page's QR code with the camera; **Type a page…** takes every digit of the page in order (the code's content: header, pad rows, key rows, device keys, checksum — spaces ignored), and the on-screen keypad is used so that no keyboard logger sees it. Either way the page's **checksum** is verified and the set code, direction and page number are shown; a mis-read page is refused.
+
+**Encipher a message** takes the text (letters, digits, spaces; punctuation as words), pads it with spaces to the page's length so that its size does not show, and shows the ciphertext in groups of five, then the hand tag, then the nineteen-digit **device tag** — a second tag that only devices compute and check, with a forgery chance of about one in 10¹⁶. Post the digits anywhere. **Decipher a message** takes the ciphertext and the tag or tags that came with it, checks them **before** showing anything (a failed check shows nothing but the refusal), and shows the text in the locked viewer. **Done — destroy the page** wipes the page from the device; the paper is the only record, and the toast reminds you to put it in water. Nothing on this page is remembered: a page lives in Aska's memory like a key and is gone when you press Done, leave the page or close the application.
+
+The same page can thus be used by a person at one end and a device at the other; the ciphertext digits can travel by any channel — including, for convenience and no extra security, as the text of an ordinary Aska note.
+
+## 11.6 The worksheet
+
+**Show the worksheet** / **Print the worksheet…** at the end of the Paper page (or `aska paper worksheet`, with `--ps` or `--print` for sheets) give three sheets that are **not secret** and may be printed anywhere: the method — the table, the arithmetic, the hand tag, the rules — on one; a complete **worked example** (page `7342 A 03`, the message `MEET 14 NOV NORTH GATE`, every product of the hand tag and both reductions) on the second, so that you can check your own arithmetic against known answers before the first real message; and a **working sheet** of blank grids for rows M, K and C and for the hand-tag products on the third. Print the worksheet, do the example once by hand, and keep the sheet with the booklet. Working sheets you have written on are destroyed with the page.
+
+## 11.7 Deniability, and what paper mode cannot do
+
+For any ciphertext and any innocent text of the same length there exists a pad that "decrypts" the one into the other. **Make a cover page** (`aska paper cover` on the command line) produces such a page, with the same set code and page number as the destroyed real page and fresh random keys, for the holder who may be made to produce "the page". It cannot make the real message's hand tag verify against the cover keys; a coerced receiver can only say that the tag was never checked or was copied wrongly, and the design cannot do better. A cover page is a made object: whether to use one is a judgement about who may be asking.
+
+What paper mode cannot do: protect a page that was photographed, kept "for safety", written on a pad that took the impression, or used twice (two messages on one page break the proof entirely and partly reveal both); protect the message from the person who holds the other copy; hide that two people exchange digits; or carry anything but short text. Block cards and Share cards (section 11.8) are Aska's ordinary encryption on paper and have Aska's ordinary properties, not these.
+
+## 11.8 Block cards and Share cards
+
+Separate from the pad, 1.2 can also put Aska's ordinary sealed Block on paper. On the **Send** page the protection level **Paper** seals the note as usual but, instead of posting it to a relay, shows it as a set of **Block cards** — QR codes in Aska's viewer, four for a 4 KiB Block, sixteen for 16 KiB (64 KiB is not offered on paper) — which the receiver reads with **Read Block cards…** on the Receive page, from your screen or from paper, in any order; the note then opens with the key you hand over next, exactly as from a relay. The cards are noise without the key, so they may be shown, photographed or **printed anywhere** (*Print cards…*), with one reservation: a printed card can be matched to the printer that made it. On the **Hand-over** screen a Share can be printed as a **Share card** (*Print this Share as a card…*) — its QR code and its text in groups, with "Share 2 of 5 — any 3 open the note" and nothing else; Share cards go only to a USB printer, never to a network or shared one.
+
+---
+
+# 12. The command-line client
 
 `aska` does everything the graphical client does, in a terminal, with the same rules: secrets are never taken from the command line or the environment (only typed with echo off, scanned, or piped with `--stdin`), nothing is written unless you name a file, hand-over material and notes are shown on the alternate screen with a countdown and cleared afterwards, and every command runs the environment checks first.
 
@@ -303,15 +405,24 @@ aska --profile ~/circle.aska key receive --stored  # its public key again (sever
 aska verify                                    # own hash, release key, signed list check (offline)
 aska --relay <onion> profile create --file ~/circle.aska   # the optional encrypted profile (needs ≥ 1 relay)
 aska --profile ~/circle.aska send              # use it
+aska paper worksheet                           # 1.2: the method, the worked example (text; --ps/--print for sheets)
+aska paper generate --source camera --pages 5 --rows   # a PHYSICAL booklet, row by row for hand copy
+aska paper generate --source dice --digits 200 --print lp0 --i-have-read-the-rules   # SEEDED, printed under the rule
+aska paper encipher --page-from camera         # scan a page, type the message: ciphertext, hand tag, device tag
+aska paper decipher --page-from typed          # type the page and the ciphertext; the tags are checked first
+aska paper cover --set-code 7342 --direction A --number 3 --rows   # a cover page for a ciphertext and an innocent text
+aska paper seal-cards --print lp0              # a note as Block cards on any printer; then the hand-over
+aska paper open-cards                          # scan Block cards until the Block is whole, then open it
+aska paper share-cards --threshold 2 --print lp0   # Shares as cards (USB printer only)
 ```
 
-Global options: `--relay` (repeatable), `--profile FILE`, `--socks HOST:PORT` (default 127.0.0.1:9050) or `--tor-browser` (127.0.0.1:9150), `-y`/`--yes` to acknowledge warnings (a success then exits 2), `--accept-unlocked-memory`, `--qr half|ascii|none`, `--idle SECONDS`, `--scan-cmd CMD` (the helper used when no camera can be read in-process) and `--scan-helper` (always use the helper). Typing `scan` at a key-material prompt reads the camera in-process (1.1). `aska --help` and `aska <command> --help` are the full reference.
+Global options: `--relay` (repeatable), `--profile FILE`, `--socks HOST:PORT` (default 127.0.0.1:9050) or `--tor-browser` (127.0.0.1:9150), `-y`/`--yes` to acknowledge warnings (a success then exits 2), `--accept-unlocked-memory`, `--qr half|ascii|none`, `--idle SECONDS`, `--scan-cmd CMD` (the helper used when no camera can be read in-process) and `--scan-helper` (always use the helper). Typing `scan` at a key-material prompt reads the camera in-process (1.1). The `paper` commands (1.2) output sheets with `--ps` (PostScript to standard output), `--pbm`, `--rows` (the terminal, one row per keypress for pads) or `--print PRINTER` (the local print system; pads need `--i-have-read-the-rules` and the rule of section 11.4 holds), and take a page `--page-from camera` or `typed`. `aska --help` and `aska <command> --help` are the full reference.
 
 Exit codes: 0 success · 2 success after acknowledged warnings · 3 you declined · 4 relay unreachable or full · 5 nothing found or opened · 6 refused (not through Tor, or a relay that is not a `.onion`) · 141 output closed early, e.g. by `| head` (1.1.0 and later) · 1 other error.
 
 ---
 
-# 12. Removing Aska
+# 13. Removing Aska
 
 ```bash
 rm -f ~/.local/bin/aska ~/.local/bin/aska-gui
@@ -324,7 +435,7 @@ If you created an encrypted profile, *Forget…* it from Settings first (or dele
 
 ---
 
-# 13. Getting help and reporting problems
+# 14. Getting help and reporting problems
 
 The source code, the design documents, the internal review report and the release records are at `https://github.com/secunos/aska`. A problem report (the repository's *Issues* page) should never contain a note, a key, a Key Card, a passphrase or a relay address — the output of `aska doctor` and the exact error text are enough. If you believe you have found a security flaw, report it privately first through the repository's *Security → Report a vulnerability* page (see `SECURITY.md`).
 

@@ -36,6 +36,7 @@ pub mod pad;
 pub mod page;
 pub mod print;
 pub mod render;
+pub mod worksheet;
 
 pub use aska_core::secret::LockedBuf;
 

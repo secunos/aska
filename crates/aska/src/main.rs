@@ -456,8 +456,12 @@ enum PaperCmd {
         #[arg(long, value_enum, default_value_t = cmd_paper::PageFrom::Camera)]
         page_from: cmd_paper::PageFrom,
     },
-    /// Print the worksheet: the table, the arithmetic, the hand tag and the rules (not secret)
-    Worksheet,
+    /// The worksheet: the table, the arithmetic, the hand tag, the rules, the worked example
+    /// and a blank working sheet (not secret). Text by default; --ps, --pbm or --print for sheets
+    Worksheet {
+        #[command(flatten)]
+        out: SheetOut,
+    },
     /// A cover page: the pad that turns a ciphertext into an innocent text of the same length
     Cover {
         #[arg(long, value_parser = clap::value_parser!(u16).range(0..=9999))]
@@ -627,7 +631,9 @@ fn run(cli: Cli) -> Result<i32, Fail> {
             )?,
             PaperCmd::Decipher { page_from } => cmd_paper::decipher(&mut ctx, page_from)?,
             PaperCmd::CheckPage { page_from } => cmd_paper::check_page(&mut ctx, page_from)?,
-            PaperCmd::Worksheet => cmd_paper::worksheet()?,
+            PaperCmd::Worksheet { out } => {
+                cmd_paper::worksheet(&mut ctx, &out.sink(true)?, out.paper, out.dpi)?
+            }
             PaperCmd::Cover {
                 set_code,
                 direction,

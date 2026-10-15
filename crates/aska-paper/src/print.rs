@@ -3,8 +3,8 @@
 //! carries a page raster.
 //!
 //! Rules enforced here, not in the clients: a pad is printed only when the **spool directory
-//! is on volatile storage** (tmpfs or ramfs — the job file would otherwise sit on disk after
-//! the job is "deleted"), and only to a printer whose **device URI is `usb://`** (a network
+//! is on volatile storage** (tmpfs or ramfs, or Tails' amnesic root overlay — the job file would
+//! otherwise sit on disk after the job is "deleted"), and only to a printer whose **device URI is `usb://`** (a network
 //! printer receives the job in clear and may keep it; `cups-pdf:` and `file:` would write a
 //! file). The job name is a fixed word. The job travels as PostScript built in locked memory
 //! from the raster — through the socket, never through a temporary file.
@@ -70,6 +70,10 @@ pub fn spool_is_volatile_at(path: &str) -> Result<(), Refusal> {
     }
     match fs_type_of(&mounts, path) {
         Some(ty) if ty == "tmpfs" || ty == "ramfs" => Ok(()),
+        // Tails: the root filesystem is an overlay whose writable layer is RAM (the system is
+        // amnesic by construction), so a spool directory on it is volatile. Elsewhere an
+        // overlay's upper directory may well be a disk, and it is refused like any other type.
+        Some(ty) if ty == "overlay" && aska_core::platform::is_tails() => Ok(()),
         Some(ty) => Err(Refusal::SpoolPersistent(format!("filesystem type {ty}"))),
         None => Err(Refusal::SpoolPersistent("no mount point found".into())),
     }

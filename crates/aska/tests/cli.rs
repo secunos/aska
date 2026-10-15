@@ -1342,3 +1342,43 @@ fn paper_sheets_ps_pbm_and_print_rules() {
     assert_eq!(none.code, 1);
     assert!(none.stderr.contains("choose an output"), "{}", none.dump());
 }
+
+#[test]
+fn paper_worksheet_text_and_sheets() {
+    let b = Bench::new("worksheet");
+    // Text by default: the method and the worked example, with the §12 numbers.
+    let t = b.aska(&["paper", "worksheet"], "");
+    assert!(t.ok(), "{}", t.dump());
+    assert!(
+        t.stdout.starts_with("ASKA PAPER MODE - WORKSHEET\n"),
+        "{}",
+        t.dump()
+    );
+    for needle in [
+        "70 R  71 H",
+        "10000 = 9973 + 27",
+        "WORKED EXAMPLE",
+        "SUM = 3314972",
+        "TAG = 3936",
+        "0876449745860556196",
+    ] {
+        assert!(t.stdout.contains(needle), "missing {needle}: {}", t.dump());
+    }
+    // Sheets: three (method, example, working sheet), on either paper, no rule to acknowledge.
+    let ps = b.aska(&["paper", "worksheet", "--ps"], "");
+    assert!(ps.ok(), "{}", ps.dump());
+    assert!(
+        ps.stdout.starts_with("%!PS-Adobe-3.0\n%%Pages: 3\n"),
+        "{}",
+        &ps.stdout[..40]
+    );
+    assert!(ps.stderr.contains("Not secret"), "{}", ps.dump());
+    let pbm = b.aska(&["paper", "worksheet", "--pbm", "--paper", "letter"], "");
+    assert!(pbm.ok(), "{}", pbm.dump());
+    assert!(
+        pbm.stdout.starts_with("P4\n1275 1650\n"),
+        "{}",
+        &pbm.stdout[..20]
+    );
+    assert_eq!(pbm.stdout.matches("P4\n").count(), 3);
+}

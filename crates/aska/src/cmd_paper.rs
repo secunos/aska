@@ -786,47 +786,19 @@ pub fn cover(ctx: &mut Ctx, o: &CoverOpts) -> CmdResult {
 // ---------------------------------------------------------------------------------------------
 // worksheet
 
-pub const WORKSHEET: &str = "\
-ASKA PAPER MODE — WORKSHEET (not secret; print on any paper)
-
-1. THE TABLE (text to digits). One digit for E T A O I N S; two digits for the rest.
-      0 E   1 T   2 A   3 O   4 I   5 N   6 S
-     70 R  71 H  72 L  73 D  74 C  75 U  76 M  77 F  78 P  79 G
-     80 W  81 Y  82 B  83 V  84 K  85 X  86 J  87 Q  88 Z  89 space
-     90 0  91 1  92 2  93 3  94 4  95 5  96 6  97 7  98 8  99 9
-   Write AA for Å, AE for Ä, OE for Ö; punctuation as words (STOP, COMMA) or leave it out.
-   Reading back: a 0–6 is a letter by itself; a 7, 8 or 9 always takes the next digit with it.
-
-2. ENCIPHER. Write the message digits in a row. Under them, the page's pad digits from the
-   first. Add each column WITHOUT carrying (7 + 5 = 2). The result is the ciphertext.
-   DECIPHER: ciphertext minus pad, digit by digit, adding 10 when needed (2 − 5 = 7).
-
-3. HAND TAG (four digits) over the CIPHERTEXT. Write the ciphertext in pairs: G1 G2 … (a
-   lone last digit is its own group). L = number of ciphertext digits. With the page's keys:
-      sum = A0 × L + A1 × G1 + A2 × G2 + … + B
-   Reduce: split sum = q × 10000 + r and replace it by r + 27 × q; repeat until below 9973.
-   (Because 10000 = 9973 + 27.) The result, as four digits, is the tag. The receiver recomputes
-   it from the received ciphertext BEFORE deciphering; a difference means the message was
-   altered or the wrong page was used.
-
-4. SEND the ciphertext in groups of five, then the tag. Any channel will do.
-
-5. RULES. One page, one message. Write on glass or a single sheet on a hard surface — never on
-   a pad of paper (impressions). Never photograph a page. Destroy the page and the working
-   sheet at once: soluble paper into water, STIR until nothing is left; if the page was
-   laser-printed the toner floats as a film — break it up and pour through a sieve or down a
-   running drain. Ordinary paper: cross-cut shred to dust, or burn and stir the ash.
-
-6. DIRECTIONS. Holder A sends with A-pages, holder B with B-pages, each in order. Never use a
-   page the other side sends with.
-
-7. DEVICE TAG (nineteen digits) is computed and checked by the app only (`aska paper encipher`
-   / `decipher`); a hand user may ignore it.
-";
-
-pub fn worksheet() -> CmdResult {
-    out!("{WORKSHEET}")?;
-    Ok(())
+/// The worksheet: text on the terminal (the default), or sheets like any other material. It is
+/// not secret, so no printing rule applies (`Material::Block`).
+pub fn worksheet(ctx: &mut Ctx, sink: &Sink, paper: PaperArg, dpi: u32) -> CmdResult {
+    if *sink == Sink::Rows {
+        out!("{}", aska_paper::worksheet::TEXT)?;
+        out!("")?;
+        out!("{}", aska_paper::worksheet::EXAMPLE)?;
+        return Ok(());
+    }
+    let ro = render_opts(paper, dpi);
+    let sheets = aska_paper::worksheet::render(&ro);
+    note!("Worksheet: {} sheets (the method, the worked example, a blank working sheet). Not secret; any printer and paper will do.", sheets.len());
+    emit_sheets(ctx, &sheets, sink, Material::Block, true, dpi)
 }
 
 // ---------------------------------------------------------------------------------------------

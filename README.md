@@ -146,7 +146,7 @@ aska profile create|open|forget --file FILE  optional encrypted profile (relays 
 aska paper generate [--source camera|dice|typing] [--pages 10] [--digits 400] [--no-hand-tag]
             (--rows | --ps | --pbm | --print PRINTER --i-have-read-the-rules)     one-time pad booklet (1.2, DC-04)
 aska paper encipher|decipher|check-page [--page-from camera|typed]   a message with a pad page; tags checked first
-aska paper worksheet                         the table, the arithmetic, the hand tag, the rules (not secret)
+aska paper worksheet [--ps|--pbm|--print P]   the method, a worked example and a blank working sheet (text, or three sheets; not secret)
 aska paper cover --set-code N --direction A|B --number N …   a cover page for a ciphertext and an innocent text
 aska paper seal-cards … / aska paper open-cards   a Block as QR cards instead of a relay (classes 1–2)
 aska paper share-cards                       Shares as cards, one per sheet

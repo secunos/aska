@@ -105,6 +105,12 @@ $CARD2
 EOF
 rc=${PIPESTATUS[0]}; ok "$rc" || { echo "GATE FAIL: aska paper open-cards exited $rc"; exit 1; }
 grep -q "cards: the north gate" "$PAPER_OUT" || { echo "GATE FAIL: the card note did not come back"; exit 1; }
+cat "$LOG.p" >>"$LOG"
+# The worksheet as sheets (PostScript to stdout): rendered in memory, nothing written.
+# shellcheck disable=SC2086
+$TRACE "$LOG.p" "$BIN" $COMMON paper worksheet --ps 2>/dev/null </dev/null | cat >"$PAPER_OUT"
+rc=${PIPESTATUS[0]}; ok "$rc" || { echo "GATE FAIL: aska paper worksheet exited $rc"; exit 1; }
+grep -q "^%%Pages: 3" "$PAPER_OUT" || { echo "GATE FAIL: the worksheet did not render"; exit 1; }
 cat "$LOG.p" >>"$LOG"; rm -f "$LOG.p"
 
 # strace must have been able to read the traced process. Aska makes itself non-dumpable at

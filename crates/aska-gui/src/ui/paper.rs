@@ -430,6 +430,33 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
         });
     }
 
+    // ---- The worksheet (not secret) ----
+    root.append(&heading(&tr("paper.worksheet")));
+    let ws_box = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    ws_box.append(&hint(&tr("paper.worksheet.hint")));
+    let ws_buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let ws_show = gtk::Button::with_label(&tr("paper.worksheet.show"));
+    let ws_print = gtk::Button::with_label(&tr("paper.worksheet.print"));
+    ws_buttons.append(&ws_show);
+    ws_buttons.append(&ws_print);
+    ws_box.append(&ws_buttons);
+    root.append(&ws_box);
+    {
+        let ui = ui.clone();
+        ws_show.connect_clicked(move |_| show_worksheet(&ui));
+    }
+    {
+        let ui = ui.clone();
+        ws_print.connect_clicked(move |_| {
+            let opts = RenderOptions {
+                dpi: RENDER_DPI,
+                ..RenderOptions::default()
+            };
+            let sheets = aska_paper::worksheet::render(&opts);
+            printdlg::open(&ui, printdlg::Material::Block, sheets, RENDER_DPI);
+        });
+    }
+
     // Leaving the page wipes everything it held.
     let page = ui.page("paper", &tr("paper.title"), &clamp);
     {
@@ -577,6 +604,43 @@ fn make_booklet(ui: &Rc<Ui>, m: &Make, state: &Rc<RefCell<State>>) {
 
 /// The hand-copy view (DC-04 §5.5): one row at a time in the locked viewer, no way back once
 /// a page is finished; the page's QR on the first screen so a second device can scan it.
+/// The worksheet in a scrollable dialog. It is public text, so an ordinary label (not
+/// selectable only because a focused selectable label selects itself whole and scrolls to its
+/// end).
+fn show_worksheet(ui: &Rc<Ui>) {
+    let dialog = adw::Dialog::builder()
+        .title(tr("paper.worksheet"))
+        .content_width(760)
+        .content_height(640)
+        .build();
+    let tv = adw::ToolbarView::new();
+    tv.add_top_bar(&adw::HeaderBar::new());
+    let text = format!(
+        "{}\n{}",
+        aska_paper::worksheet::TEXT,
+        aska_paper::worksheet::EXAMPLE
+    );
+    let label = gtk::Label::builder()
+        .label(text)
+        .xalign(0.0)
+        .selectable(false)
+        .can_focus(false)
+        .css_classes(["aska-mono"])
+        .margin_top(6)
+        .margin_bottom(18)
+        .margin_start(18)
+        .margin_end(18)
+        .build();
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Automatic)
+        .vscrollbar_policy(gtk::PolicyType::Automatic)
+        .child(&label)
+        .build();
+    tv.set_content(Some(&scroller));
+    dialog.set_child(Some(&tv));
+    dialog.present(ui.window().as_ref());
+}
+
 fn show_rows(ui: &Rc<Ui>, b: &Booklet) {
     // Row texts for every page, prepared now in locked buffers; the booklet itself stays in
     // the page state and is not referenced by the dialog.
