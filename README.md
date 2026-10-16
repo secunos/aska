@@ -10,9 +10,9 @@ test vectors are in `reference/`.
 - **[User Guide](docs/USER_GUIDE.md)** — requirements, how to check that your copy is real, install, send and receive, the receiving-key path, Tails and Qubes, and what Aska does **not** protect you against. Shipped inside every release tarball as `docs/USER_GUIDE.md`.
 - **[Relay Operator Guide](docs/RELAY_OPERATOR_GUIDE.md)** — what a relay is, requirements, install from the signed binary, configuration, upgrade, what running one means. Shipped as `aska-drop-deploy-<version>.tar.gz` beside the relay binary.
 - **Releases** (`https://github.com/secunos/aska/releases`) are signed with minisign key `79AD6224AFF176C9` (`release/aska-release.pub`); each release directory carries `SHA256SUMS.txt`, its signature and `RELEASE-NOTES.txt`. Get the fingerprint out of band first, then the files — the User Guide, section 3, says how.
-- **Specifications** (re-issued 8 Oct 2026 to match release 1.1.0): `docs/Secure_Notes_Sharing_App_Aska_Decision_Record_and_Threat_Model_v0.5.md`, `docs/Aska_Client_Design_v0.7.md`, `docs/Aska_Block_Format_Specification_v1_draft0.7.md`, `docs/Aska_Dead_Drop_Protocol_Specification_ADP1_draft0.4.md`. Earlier versions stay in `docs/` because older documents refer to them.
-- **Releases so far:** 1.0.0 (6 Oct 2026), 1.0.1 (7 Oct), **1.1.0 (8 Oct 2026)** — the 1.1 plan is `docs/Aska_1.1_Plan_v0.3.md`, the release records are in `docs/releases/`.
-- **Release status:** 1.1.0 has passed the project's own gates and an internal security pre-review (`docs/Aska_Internal_PreReview_Report_v0.1.md`); it has **not** had an independent security audit or a legal review. The Security Review Package and Legal Review Brief in `docs/` are published so that anyone can conduct one.
+- **Specifications** (re-issued 16 Oct 2026 to match release 1.2.0): `docs/Secure_Notes_Sharing_App_Aska_Decision_Record_and_Threat_Model_v0.6.md`, `docs/Aska_Client_Design_v0.8.md`, `docs/Aska_Block_Format_Specification_v1_draft0.8.md`, `docs/Aska_Dead_Drop_Protocol_Specification_ADP1_draft0.4.md` (unchanged since 1.1.0), and the paper mode's design `docs/Aska_Design_Change_DC-04_Paper_Mode_v0.3.md`. Earlier versions stay in `docs/` because older documents refer to them.
+- **Releases so far:** 1.0.0 (6 Oct 2026), 1.0.1 (7 Oct), 1.1.0 (8 Oct), **1.2.0 (the paper mode; October 2026)** — the plans are `docs/Aska_1.1_Plan_v0.4.md` and `docs/Aska_1.2_Plan_v0.2.md`, the release records are in `docs/releases/`.
+- **Release status:** 1.2.0 has passed the project's own gates; 1.0 had an internal security pre-review (`docs/Aska_Internal_PreReview_Report_v0.1.md`) and the code added since — the camera layer, the note viewer, the paper mode — has had the project's tests and gates, not a review pass; no release has had an independent security audit or a legal review. The Security Review Package and Legal Review Brief in `docs/` are published so that anyone can conduct one.
 
 Licences: `LICENSE.md`. Reporting a security problem: `SECURITY.md`. The rest of this file is for developers.
 
@@ -38,7 +38,7 @@ Plan: `docs/Aska_Prototype_Plan_v0.1.md`.
 | `crates/aska-gui` | GTK4 / libadwaita graphical client: Home, Send, Hand-over, Receive, View, Settings, Shares, Receiving key | MIT OR Apache-2.0 | **M5 + M5c code done** |
 | `crates/aska-drop` | Dead Drop relay: RAM-only store, PoW, no logs, mlock | AGPL-3.0 | **M2 done** |
 | `crates/aska-scan` | in-process QR scanning: V4L2 camera capture through `libc` only, pure-Rust decoder (`rqrr`); frames wiped | MIT OR Apache-2.0 | **1.1** |
-| `crates/aska-paper` | paper mode (DC-04): one-time pad pages with a hand tag and a device tag, the two-source entropy pipeline (health tests, min-entropy estimate, seeded Toeplitz extractor, mixing with the OS generator), Block and Share cards, the bitmap-font page renderer — in locked memory, nothing written | MIT OR Apache-2.0 | **1.2 (in development)** |
+| `crates/aska-paper` | paper mode (DC-04): one-time pad pages with a hand tag and a device tag, the two-source entropy pipeline (health tests, min-entropy estimate, seeded Toeplitz extractor, mixing with the OS generator), Block and Share cards, the bitmap-font page renderer — in locked memory, nothing written | MIT OR Apache-2.0 | **1.2** |
 
 ## Running it yourself (Debian 12/13 or Ubuntu 24.04+ in VirtualBox)
 
@@ -152,7 +152,7 @@ aska paper seal-cards … / aska paper open-cards   a Block as QR cards instead 
 aska paper share-cards                       Shares as cards, one per sheet
 ```
 
-**Paper mode (1.2, in development; `docs/Aska_Design_Change_DC-04_Paper_Mode_v0.2.md`).** A pad
+**Paper mode (1.2; `docs/Aska_Design_Change_DC-04_Paper_Mode_v0.3.md`, User Guide chapter 11).** A pad
 is printed only when the print spool is on volatile storage (tmpfs/ramfs) and the printer is
 reached over USB — otherwise the client refuses and shows the page row by row for copying by
 hand; `--ps`/`--pbm` write the sheets to standard output for an operator who knows where they go.

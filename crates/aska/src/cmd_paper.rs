@@ -302,11 +302,18 @@ pub fn generate(ctx: &mut Ctx, o: &GenerateOpts) -> CmdResult {
         hand_tag: o.hand_tag,
     };
     spec.validate().map_err(paper_err)?;
-    if matches!(o.sink, Sink::Print(_)) && !o.rules_read {
-        return Err(Fail::new(
-            exit::ERROR,
-            "printing a pad needs --i-have-read-the-rules (see `aska paper worksheet`)",
-        ));
+    if let Sink::Print(name) = &o.sink {
+        if !o.rules_read {
+            return Err(Fail::new(
+                exit::ERROR,
+                "printing a pad needs --i-have-read-the-rules (see `aska paper worksheet`)",
+            ));
+        }
+        // The spool and printer rule, before any digit is generated (it is checked again when
+        // the job is sent, on the final facts).
+        let printer =
+            print::find_printer(name).map_err(|r| Fail::new(exit::ERROR, r.to_string()))?;
+        print::pad_print_checks(&printer).map_err(|r| Fail::new(exit::ERROR, r.to_string()))?;
     }
     note!(
         "Generating a booklet: {} A-pages and {} B-pages of {} digits{} ({} extracted bits needed from the physical source).",
