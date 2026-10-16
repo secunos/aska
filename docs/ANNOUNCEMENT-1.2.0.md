@@ -33,9 +33,9 @@ Before you download, obtain these from a source you trust that is not the downlo
 
 ```
 Tarball        aska-gui-1.2.0-linux-x86_64.tar.gz
-SHA-256        (filled at signing)
+SHA-256        b36ccd08af0d1881c6f3c21baa3061f2bc3697116488c1e642788a3825143992
 Relay binary   aska-drop-1.2.0-linux-x86_64
-SHA-256        (filled at signing)
+SHA-256        eb1c7a381ca7303a241e3c299799dc799e109aa03b968a22933343e84fdfa670
 Signing key    79AD6224AFF176C9   (unchanged)
 Public key     RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox
 Rekor entry    none for this release
