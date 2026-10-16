@@ -2,7 +2,7 @@
 # Samma nycklar som en.txt. Varje varning säger vad man ska göra åt den.
 
 app.name = Aska
-app.tagline = Ingenting sparas här. Någonsin.
+app.tagline = Anteckningar som inte lämnar några spår
 app.title = aska
 
 home.send = Skicka ett meddelande

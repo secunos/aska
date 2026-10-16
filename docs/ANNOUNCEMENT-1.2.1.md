@@ -1,6 +1,6 @@
 # Aska 1.2.1
 
-A small release: **Aska has a face.** The Glow mark — an ember with a ring of heat — is the app icon; the client wears the Nordic calm palette, ash greys with one ember accent, in light and dark; the Home screen carries the lockup. *Notes that leave no trace.*
+A small release: **Aska has a face.** The Glow mark — an ember with a ring of heat — is the app icon; the client wears the Nordic calm palette, ash greys with one ember accent, in light and dark; the Home screen carries the lockup with its slogan, which also replaces the old tagline in the launcher and the command line's help. *Notes that leave no trace.*
 
 Nothing else changed: no behaviour, no format, no rule. Everything from 1.2.0 works exactly as before, and notes, keys, pad pages and profiles are unaffected. Relay operators need not upgrade.
 

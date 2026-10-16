@@ -6,7 +6,7 @@ What the repository carries:
 
 - `docs/brand/aska-horizontal-on-light.png`, `-on-dark.png` — the lockup shown at the top of the README.
 - `deploy/gui/icons/hicolor/` — the freedesktop icon theme for the app id `org.aska.Aska` (PNG 16–512, scalable SVG, symbolic SVG); installed by `install.sh`, packaged by `scripts/package-gui.sh`.
-- `crates/aska-gui/brand/` — the libadwaita colour overrides (`aska.css`, `aska-dark.css`), the short lockups the Home screen embeds, and `aska-tokens.json`, the colour source of truth.
+- `crates/aska-gui/brand/` — the libadwaita colour overrides (`aska.css`, `aska-dark.css`), the horizontal lockups with the slogan (`aska-horizontal-on-light.png`, `-on-dark.png` and their SVGs) that the Home screen embeds, and `aska-tokens.json`, the colour source of truth.
 
 | Role | Light | Dark |
 |---|---|---|
@@ -19,4 +19,4 @@ What the repository carries:
 | warning | `#866500` | `#E6C04A` |
 | danger | `#B0323C` | `#F2878C` |
 
-Every text colour meets WCAG AA against its background. Rules: use the on-dark lockup on dark backgrounds and on-light on light ones; keep clear space equal to the height of the `a`; do not recolour the ember, stretch the logo or set the slogan in another typeface. The full kit (Android, iOS, Windows and web icons, all lockups as SVG and PNG) is the owner's; this directory holds what the Linux client and the repository use.
+Every text colour meets WCAG AA against its background. Rules: use the on-dark lockup on dark backgrounds and on-light on light ones; keep clear space equal to the height of the `a`; do not recolour the ember, stretch the logo or set the slogan in another typeface — in the client the slogan is therefore part of the lockup image, never a text label. The full kit (Android, iOS, Windows and web icons, all lockups as SVG and PNG) is the owner's; this directory holds what the Linux client and the repository use.

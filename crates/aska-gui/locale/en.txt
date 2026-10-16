@@ -3,7 +3,7 @@
 # Every warning says what to do about it.
 
 app.name = Aska
-app.tagline = Nothing is stored here. Ever.
+app.tagline = Notes that leave no trace
 app.title = aska
 
 home.send = Send a note

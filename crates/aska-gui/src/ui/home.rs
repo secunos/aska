@@ -22,8 +22,8 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
     let root = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(18)
-        // 36 until 1.2.1; the lockup is 13 px taller than the title label it replaced, and the
-        // buttons below must stay where the GUI gates click them.
+        // 36 until 1.2.1; the lockup (title + slogan) is taller than the title label and the
+        // tagline it replaced, and the buttons below must stay where the GUI gates click them.
         .margin_top(23)
         .margin_bottom(18)
         .margin_start(36)
@@ -31,14 +31,10 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
         .valign(gtk::Align::Fill)
         .build();
 
-    // The brand lockup (1.2.1) in place of the former `title-1` label, at the same height.
-    let title = super::brand::lockup(&tr("app.name"));
-    let tagline = gtk::Label::builder()
-        .label(tr("app.tagline"))
-        .css_classes(["dim-label", "title-4"])
-        .build();
+    // The brand lockup (1.2.1) — mark, wordmark and slogan — in place of the former `title-1`
+    // label and the tagline below it, at their combined height.
+    let title = super::brand::lockup(&tr("app.name"), &tr("app.tagline"));
     root.append(&title);
-    root.append(&tagline);
 
     let buttons = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)

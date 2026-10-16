@@ -2,7 +2,7 @@
 
 ## Version 1.2 — for Aska 1.2.0 and 1.2.1 (Linux x86-64)
 
-Aska sends a short note to one person, or to a small group, in a way that leaves nothing behind. The note is encrypted on your computer, parked as unreadable noise on a relay that is reachable only through Tor, fetched by the receiver, shown on their screen, and gone. Aska keeps no history, no contacts, no account, no log, and writes nothing to disk unless you ask it to. Since 1.2 it can also make a **one-time pad on paper**, for messages that must be exchanged with no computer at all (chapter 11).
+**Aska — notes that leave no trace.** Aska sends a short note to one person, or to a small group, in a way that leaves nothing behind. The note is encrypted on your computer, parked as unreadable noise on a relay that is reachable only through Tor, fetched by the receiver, shown on their screen, and gone. Aska keeps no history, no contacts, no account, no log, and writes nothing to disk unless you ask it to. Since 1.2 it can also make a **one-time pad on paper**, for messages that must be exchanged with no computer at all (chapter 11).
 
 This guide tells you what you need, how to check that the copy you have is the real one, how to install it, how to send and receive, and — just as important — what Aska does **not** protect you against. Read section 9 even if you skip the rest.
 
@@ -86,7 +86,7 @@ sha256sum -c SHA256SUMS            # both lines: OK
 
 ## 3.4 First start
 
-Start Aska from your desktop's application menu ("Aska"), or with `aska-gui` in a terminal. Every start runs the **environment checks** (section 4) and shows their findings as banners on the Home screen.
+Start Aska from your desktop's application menu ("Aska", with the ember icon; since 1.2.1 the entry reads *Notes that leave no trace*), or with `aska-gui` in a terminal. The Home screen shows the Aska lockup — the mark, the name and the slogan — above four buttons; there is no list of anything, because nothing is kept. Every start runs the **environment checks** (section 4) and shows their findings as banners on the Home screen.
 
 Open **Settings** (the gear) → **Verify this app**. It must say
 

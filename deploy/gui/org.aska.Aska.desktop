@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Aska
-Comment=Send a note that leaves nothing behind
+Comment=Notes that leave no trace
 Exec=aska-gui
 Icon=org.aska.Aska
 Terminal=false
