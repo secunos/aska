@@ -2,6 +2,7 @@
 //! and the behaviours common to every screen (§5.7): the title is always "aska", there are
 //! no notifications, and an idle Session closes itself and returns to Home.
 
+pub mod brand;
 pub mod cards;
 pub mod digitpad;
 pub mod handover;
@@ -234,15 +235,7 @@ pub fn body(max_width: i32) -> (gtk::Box, adw::Clamp) {
 }
 
 pub fn build(application: &adw::Application) {
-    let provider = gtk::CssProvider::new();
-    provider.load_from_string(CSS);
-    if let Some(display) = gtk::gdk::Display::default() {
-        gtk::style_context_add_provider_for_display(
-            &display,
-            &provider,
-            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        );
-    }
+    brand::install(CSS);
 
     let app = crate::state::App::new();
     let nav = adw::NavigationView::new();

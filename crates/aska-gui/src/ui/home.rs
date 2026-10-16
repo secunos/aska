@@ -22,17 +22,17 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
     let root = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(18)
-        .margin_top(36)
+        // 36 until 1.2.1; the lockup is 13 px taller than the title label it replaced, and the
+        // buttons below must stay where the GUI gates click them.
+        .margin_top(23)
         .margin_bottom(18)
         .margin_start(36)
         .margin_end(36)
         .valign(gtk::Align::Fill)
         .build();
 
-    let title = gtk::Label::builder()
-        .label(tr("app.name"))
-        .css_classes(["title-1"])
-        .build();
+    // The brand lockup (1.2.1) in place of the former `title-1` label, at the same height.
+    let title = super::brand::lockup(&tr("app.name"));
     let tagline = gtk::Label::builder()
         .label(tr("app.tagline"))
         .css_classes(["dim-label", "title-4"])

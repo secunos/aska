@@ -89,7 +89,7 @@ checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 
 [[package]]
 name = "aska"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "aska-core",
  "aska-drop",
@@ -105,7 +105,7 @@ dependencies = [
 
 [[package]]
 name = "aska-core"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "argon2",
  "aska-drop",
@@ -138,7 +138,7 @@ dependencies = [
 
 [[package]]
 name = "aska-drop"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "aska-proto",
  "clap",
@@ -151,7 +151,7 @@ dependencies = [
 
 [[package]]
 name = "aska-gui"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "aska-core",
  "aska-paper",
@@ -165,7 +165,7 @@ dependencies = [
 
 [[package]]
 name = "aska-paper"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "aska-core",
  "aska-scan",
@@ -184,7 +184,7 @@ dependencies = [
 
 [[package]]
 name = "aska-proto"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "hex",
  "sha2",
@@ -194,7 +194,7 @@ dependencies = [
 
 [[package]]
 name = "aska-scan"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "libc",
  "qrcode",

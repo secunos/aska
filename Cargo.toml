@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/aska-core", "crates/aska-proto", "crates/aska", "crates/aska-drop", "crates/aska-gui", "crates/aska-scan", "crates/aska-paper"]
 
 [workspace.package]
-version = "1.2.0"
+version = "1.2.1"
 edition = "2021"
 rust-version = "1.85"
 authors = ["Aska project"]

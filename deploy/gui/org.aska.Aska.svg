@@ -1,16 +1,12 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Aska app icon: a dark disc, one ember, and the wisp that is left when a note has burned. Original artwork, MIT OR Apache-2.0 like the client. -->
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2b2f36"/>
-      <stop offset="1" stop-color="#15171b"/>
-    </linearGradient>
-  </defs>
-  <circle cx="64" cy="64" r="58" fill="url(#bg)"/>
-  <circle cx="64" cy="64" r="58" fill="none" stroke="#3b4048" stroke-width="2"/>
-  <path d="M64 96 C 50 84, 56 72, 64 64 C 72 56, 76 46, 66 34 C 80 42, 84 56, 76 66 C 70 74, 72 86, 64 96 Z" fill="#c9ccd1" opacity="0.9"/>
-  <path d="M60 100 C 52 94, 54 86, 60 82 C 64 86, 66 92, 60 100 Z" fill="#8f949c" opacity="0.8"/>
-  <circle cx="66" cy="31" r="4.5" fill="#e8843a"/>
-  <circle cx="66" cy="31" r="8" fill="#e8843a" opacity="0.25"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="aska app icon"><title>aska app icon</title><defs>
+  <radialGradient id="i-ember" cx="0.42" cy="0.38" r="0.68">
+    <stop offset="0" stop-color="#FFE6C4"/><stop offset="0.35" stop-color="#FFB27A"/>
+    <stop offset="0.72" stop-color="#E0682C"/><stop offset="1" stop-color="#A2441A"/>
+  </radialGradient>
+  <radialGradient id="i-glow" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0" stop-color="#F58B4C" stop-opacity="0.55"/><stop offset="1" stop-color="#F58B4C" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="i-tile" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#2C323A"/><stop offset="1" stop-color="#14171B"/>
+  </linearGradient>
+</defs><rect width="512" height="512" rx="114" fill="url(#i-tile)"/><rect x="1.5" y="1.5" width="509" height="509" rx="112.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="3"/><circle cx="256" cy="256" r="196" fill="url(#i-glow)"/><circle cx="256" cy="256" r="152" fill="none" stroke="#F58B4C" stroke-opacity="0.32" stroke-width="10"/><circle cx="256" cy="256" r="98" fill="url(#i-ember)"/></svg>

@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/aska-horizontal-on-dark.png">
+    <img alt="aska — notes that leave no trace" src="docs/brand/aska-horizontal-on-light.png" width="480">
+  </picture>
+</p>
+
 # Aska
 
 Fire-and-forget secure notes: a fixed-size, random-looking **Block** travels through a Tor-only
@@ -11,7 +18,7 @@ test vectors are in `reference/`.
 - **[Relay Operator Guide](docs/RELAY_OPERATOR_GUIDE.md)** — what a relay is, requirements, install from the signed binary, configuration, upgrade, what running one means. Shipped as `aska-drop-deploy-<version>.tar.gz` beside the relay binary.
 - **Releases** (`https://github.com/secunos/aska/releases`) are signed with minisign key `79AD6224AFF176C9` (`release/aska-release.pub`); each release directory carries `SHA256SUMS.txt`, its signature and `RELEASE-NOTES.txt`. Get the fingerprint out of band first, then the files — the User Guide, section 3, says how.
 - **Specifications** (re-issued 16 Oct 2026 to match release 1.2.0): `docs/Secure_Notes_Sharing_App_Aska_Decision_Record_and_Threat_Model_v0.6.md`, `docs/Aska_Client_Design_v0.8.md`, `docs/Aska_Block_Format_Specification_v1_draft0.8.md`, `docs/Aska_Dead_Drop_Protocol_Specification_ADP1_draft0.4.md` (unchanged since 1.1.0), and the paper mode's design `docs/Aska_Design_Change_DC-04_Paper_Mode_v0.3.md`. Earlier versions stay in `docs/` because older documents refer to them.
-- **Releases so far:** 1.0.0 (6 Oct 2026), 1.0.1 (7 Oct), 1.1.0 (8 Oct), **1.2.0 (the paper mode; 16 Oct 2026)** — the plans are `docs/Aska_1.1_Plan_v0.4.md` and `docs/Aska_1.2_Plan_v0.3.md`, the release records are in `docs/releases/`.
+- **Releases so far:** 1.0.0 (6 Oct 2026), 1.0.1 (7 Oct), 1.1.0 (8 Oct), **1.2.0 (the paper mode; 16 Oct 2026)**, 1.2.1 (the brand: icon, palette, lockup — no behaviour change) — the plans are `docs/Aska_1.1_Plan_v0.4.md` and `docs/Aska_1.2_Plan_v0.3.md`, the release records are in `docs/releases/`.
 - **Release status:** 1.2.0 has passed the project's own gates; 1.0 had an internal security pre-review (`docs/Aska_Internal_PreReview_Report_v0.1.md`) and the code added since — the camera layer, the note viewer, the paper mode — has had the project's tests and gates, not a review pass; no release has had an independent security audit or a legal review. The Security Review Package and Legal Review Brief in `docs/` are published so that anyone can conduct one.
 
 Licences: `LICENSE.md`. Reporting a security problem: `SECURITY.md`. The rest of this file is for developers.

@@ -1,6 +1,6 @@
 # Aska — User Guide
 
-## Version 1.2 — for Aska 1.2.0 (Linux x86-64)
+## Version 1.2 — for Aska 1.2.0 and 1.2.1 (Linux x86-64)
 
 Aska sends a short note to one person, or to a small group, in a way that leaves nothing behind. The note is encrypted on your computer, parked as unreadable noise on a relay that is reachable only through Tor, fetched by the receiver, shown on their screen, and gone. Aska keeps no history, no contacts, no account, no log, and writes nothing to disk unless you ask it to. Since 1.2 it can also make a **one-time pad on paper**, for messages that must be exchanged with no computer at all (chapter 11).
 
@@ -426,7 +426,8 @@ Exit codes: 0 success · 2 success after acknowledged warnings · 3 you declined
 
 ```bash
 rm -f ~/.local/bin/aska ~/.local/bin/aska-gui
-rm -f ~/.local/share/applications/org.aska.Aska.desktop ~/.local/share/icons/hicolor/scalable/apps/org.aska.Aska.svg
+rm -f ~/.local/share/applications/org.aska.Aska.desktop
+find ~/.local/share/icons/hicolor -name 'org.aska.Aska*' -delete 2>/dev/null
 rm -rf ~/.local/share/aska
 update-desktop-database ~/.local/share/applications 2>/dev/null
 ```

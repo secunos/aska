@@ -1,0 +1,121 @@
+{
+  "name": "Aska",
+  "version": "1.0.0",
+  "scales": {
+    "ash": {
+      "0": "#FAFBFC",
+      "50": "#F1F3F5",
+      "100": "#E1E5EA",
+      "200": "#CDD2D8",
+      "300": "#AEB5BE",
+      "400": "#8A929C",
+      "500": "#626A74",
+      "600": "#454B53",
+      "700": "#2E343B",
+      "800": "#20252B",
+      "900": "#16191E",
+      "950": "#0E1013"
+    },
+    "ember": {
+      "200": "#FFE6C4",
+      "300": "#FFB27A",
+      "400": "#F58B4C",
+      "500": "#E0682C",
+      "600": "#B4501E",
+      "700": "#7E3712"
+    }
+  },
+  "brand": {
+    "ember-core": "#E0682C",
+    "ember-glow": "#F58B4C",
+    "tile-top": "#2C323A",
+    "tile-bottom": "#14171B"
+  },
+  "roles": {
+    "background": {
+      "light": "#FAFBFC",
+      "dark": "#16191E",
+      "use": "Window background"
+    },
+    "surface": {
+      "light": "#FFFFFF",
+      "dark": "#20252B",
+      "use": "Editor, cards, header bar"
+    },
+    "surface-alt": {
+      "light": "#F1F3F5",
+      "dark": "#1B1F24",
+      "use": "Secondary panels, table headers"
+    },
+    "border": {
+      "light": "#E1E5EA",
+      "dark": "#2E343B",
+      "use": "Dividers, field outlines"
+    },
+    "text": {
+      "light": "#1B1F24",
+      "dark": "#E6E9ED",
+      "use": "Note text, labels"
+    },
+    "text-muted": {
+      "light": "#626A74",
+      "dark": "#959DA7",
+      "use": "Tagline, footer, byte counter"
+    },
+    "accent": {
+      "light": "#B4501E",
+      "dark": "#F58B4C",
+      "use": "Main action, focus ring, links"
+    },
+    "on-accent": {
+      "light": "#FFFFFF",
+      "dark": "#121519",
+      "use": "Label on an accent button"
+    },
+    "button": {
+      "light": "#E9ECEF",
+      "dark": "#2A3037",
+      "use": "Secondary button background"
+    },
+    "info": {
+      "light": "#3F6F96",
+      "dark": "#8DB4D6",
+      "use": "Blue banner, information"
+    },
+    "success": {
+      "light": "#2B7653",
+      "dark": "#6CC49A",
+      "use": "Tor connected, posted"
+    },
+    "warning": {
+      "light": "#866500",
+      "dark": "#E6C04A",
+      "use": "Amber doctor banner"
+    },
+    "warning-bg": {
+      "light": "#FBF3D9",
+      "dark": "#2E2915",
+      "use": "Amber banner background"
+    },
+    "danger": {
+      "light": "#B0323C",
+      "dark": "#F2878C",
+      "use": "Red refusal banner, Close and burn"
+    }
+  },
+  "typography": {
+    "wordmark": {
+      "family": "Outfit",
+      "weight": 500,
+      "note": "Logo only; outlined in the SVGs."
+    },
+    "slogan": {
+      "text": "Notes that leave no trace",
+      "family": "Outfit",
+      "weight": 500,
+      "case": "uppercase",
+      "tracking_em": 0.14
+    },
+    "ui": "System font on each platform (Adwaita Sans/Cantarell, Segoe UI, Roboto, SF Pro)."
+  }
+}
