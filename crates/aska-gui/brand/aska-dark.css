@@ -1,30 +1,35 @@
-/* Aska for GTK 4 / libadwaita (dark). Load with a CssProvider at
-   STYLE_PROVIDER_PRIORITY_APPLICATION, swapping light/dark when AdwStyleManager:dark changes. */
-@define-color accent_color #F58B4C;
-@define-color accent_bg_color #F58B4C;
-@define-color accent_fg_color #121519;
-@define-color destructive_color #F2878C;
-@define-color destructive_bg_color #F2878C;
-@define-color destructive_fg_color #121519;
-@define-color success_color #6CC49A;
-@define-color warning_color #E6C04A;
-@define-color error_color #F2878C;
-@define-color window_bg_color #16191E;
-@define-color window_fg_color #E6E9ED;
-@define-color view_bg_color #20252B;
-@define-color view_fg_color #E6E9ED;
-@define-color headerbar_bg_color #20252B;
-@define-color headerbar_fg_color #E6E9ED;
-@define-color headerbar_border_color #2E343B;
-@define-color card_bg_color #20252B;
-@define-color card_fg_color #E6E9ED;
-@define-color dialog_bg_color #20252B;
-@define-color dialog_fg_color #E6E9ED;
-@define-color popover_bg_color #20252B;
-@define-color popover_fg_color #E6E9ED;
+/* Aska 2.0 for GTK 4 / libadwaita (dark). Load with a CssProvider at
+   STYLE_PROVIDER_PRIORITY_APPLICATION and swap light/dark when AdwStyleManager:dark changes. */
+@define-color accent_color #F2F2F2;
+@define-color accent_bg_color #F2F2F2;
+@define-color accent_fg_color #0B0B0B;
+@define-color destructive_color #FF8A80;
+@define-color destructive_bg_color #FF8A80;
+@define-color destructive_fg_color #0B0B0B;
+@define-color success_color #6FCF97;
+@define-color warning_color #E8C547;
+@define-color error_color #FF8A80;
+@define-color window_bg_color #0B0B0B;
+@define-color window_fg_color #F2F2F2;
+@define-color view_bg_color #161616;
+@define-color view_fg_color #F2F2F2;
+@define-color headerbar_bg_color #161616;
+@define-color headerbar_fg_color #F2F2F2;
+@define-color headerbar_border_color #2A2A2A;
+@define-color card_bg_color #161616;
+@define-color card_fg_color #F2F2F2;
+@define-color dialog_bg_color #161616;
+@define-color dialog_fg_color #F2F2F2;
+@define-color popover_bg_color #161616;
+@define-color popover_fg_color #F2F2F2;
 
-/* Aska-specific */
-@define-color aska_muted #959DA7;
+@define-color aska_muted #9A9A9A;
 @define-color aska_info #8DB4D6;
-@define-color aska_warning_bg #2E2915;
+@define-color aska_info_bg #111A22;
+@define-color aska_warning_bg #1D1A0E;
+@define-color aska_danger_bg #2A1312;
+
+/* Shape: square-ish controls, no pill buttons. */
+button { border-radius: 4px; }
+.card, .boxed-list { border-radius: 8px; }
 .dim-label, .aska-muted { color: @aska_muted; opacity: 1; }

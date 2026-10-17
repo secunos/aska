@@ -1,49 +1,33 @@
-//! The Aska brand (brand kit 1.0, release 1.2.1): the "Nordic calm" palette as libadwaita
-//! colour overrides, swapped with the style manager's light/dark state, and the horizontal
-//! lockup (the Glow mark, the wordmark and the slogan "Notes that leave no trace") for the
-//! Home screen. Everything is embedded in the binary — no file is read at run time, no font is
-//! needed (the wordmark and the slogan are outlines, as the kit requires).
+//! The Aska brand (brand kit 2.0, release 1.2.2): the Graphite palette as libadwaita colour
+//! overrides, swapped with the style manager's light/dark state, and the horizontal lockup —
+//! the Fade mark and the name ASKA, nothing else — for the Home screen. Everything is embedded
+//! in the binary: no file is read at run time and no font is needed (the name is outlines).
+//!
+//! Brand kit 1.0 (release 1.2.1: the Glow mark, the Nordic calm palette, a slogan under the
+//! lockup) was superseded by the brand guidelines 2.0 on 17 October 2026.
 
 use adw::prelude::*;
 use gtk::{gdk, glib};
 
 const LIGHT_CSS: &str = include_str!("../../brand/aska.css");
 const DARK_CSS: &str = include_str!("../../brand/aska-dark.css");
-const LOCKUP_LIGHT: &[u8] = include_bytes!("../../brand/aska-horizontal-on-light.png");
-const LOCKUP_DARK: &[u8] = include_bytes!("../../brand/aska-horizontal-on-dark.png");
+/// Black lockup for light grounds, white lockup for dark grounds (the kit has no colour
+/// version). Both files share one geometry.
+const LOCKUP_LIGHT: &[u8] = include_bytes!("../../brand/aska-horizontal-black.png");
+const LOCKUP_DARK: &[u8] = include_bytes!("../../brand/aska-horizontal-white.png");
 
-/// Height of the lockup on the Home screen, in pixels: the height of the former title label
-/// plus the tagline line it also replaces, so that the buttons below do not move (the GUI
-/// gates click them by coordinate).
+/// Height of the header block on the Home screen, in pixels: the height of the former title
+/// label plus the tagline line that 1.x showed under it, kept so that the buttons below do not
+/// move (the GUI gates click them by coordinate). The lockup is drawn centred inside it.
 pub const LOCKUP_HEIGHT: i32 = 84;
 
-/// Geometry of a lockup image in the kit's design units (its SVG `viewBox`). The two images
-/// draw the mark, the wordmark and the slogan at identical positions and sizes; the on-dark
-/// one is 13.33 units larger on the left, top and bottom to make room for the mark's glow.
-/// The widget is sized for the *frame* (the on-light geometry) and draws the on-dark image at
-/// the same scale, offset by its inset, so that switching the colour scheme changes nothing in
-/// the layout — the glow overflows into the margins around the widget.
-#[derive(Clone, Copy)]
-struct Geometry {
-    width: f64,
-    height: f64,
-    inset_x: f64,
-    inset_y: f64,
-}
+/// Height at which the lockup is drawn: the guidelines put the mark at 64 px on Home, and the
+/// mark spans the lockup's full height.
+const MARK_HEIGHT: f64 = 64.0;
 
-const FRAME: Geometry = Geometry {
-    width: 470.7,
-    height: 107.3,
-    inset_x: 0.0,
-    inset_y: 0.0,
-};
-const GEOMETRY_LIGHT: Geometry = FRAME;
-const GEOMETRY_DARK: Geometry = Geometry {
-    width: 484.03,
-    height: 133.95,
-    inset_x: 13.33,
-    inset_y: 13.33,
-};
+/// Aspect ratio (width / height) of the lockup images, from the kit's `viewBox`
+/// (`-3 -95.75 483.87 119.1`).
+const LOCKUP_ASPECT: f64 = 483.87 / 119.1;
 
 /// Install the brand palette for the display and keep it in step with light/dark changes.
 /// `app_css` is the client's own rule set, loaded after the palette so that it can refer to
@@ -81,7 +65,7 @@ mod imp {
     use adw::subclass::prelude::*;
     use std::cell::RefCell;
 
-    /// A widget that draws one of two textures at a **fixed logical height** (the textures are
+    /// A widget that draws one of two textures at a **fixed logical size** (the textures are
     /// large and are scaled down by the renderer, so they stay crisp on HiDPI). `gtk::Picture`
     /// was not usable here: its natural size is the texture's pixel size, so in a box with spare
     /// room it grew and pushed the buttons below it — which the GUI gates click by coordinate.
@@ -111,8 +95,6 @@ mod imp {
             obj.set_focusable(false);
             obj.set_halign(gtk::Align::Center);
             obj.set_valign(gtk::Align::Center);
-            // The on-dark image's glow is drawn outside the allocation (see `Geometry`).
-            obj.set_overflow(gtk::Overflow::Visible);
         }
     }
 
@@ -122,9 +104,8 @@ mod imp {
         }
 
         fn measure(&self, orientation: gtk::Orientation, _for_size: i32) -> (i32, i32, i32, i32) {
-            // The same size in both colour schemes: the frame scaled to LOCKUP_HEIGHT.
             let h = LOCKUP_HEIGHT;
-            let w = (FRAME.width * h as f64 / FRAME.height).round() as i32;
+            let w = (MARK_HEIGHT * LOCKUP_ASPECT).round() as i32;
             match orientation {
                 gtk::Orientation::Horizontal => (w, w, -1, -1),
                 _ => (h, h, -1, -1),
@@ -133,27 +114,27 @@ mod imp {
 
         fn snapshot(&self, snapshot: &gtk::Snapshot) {
             let obj = self.obj();
-            let Some((t, g)) = self.current() else {
+            let Some(t) = self.current() else {
                 return;
             };
-            // Pixels per design unit, from the allocated height and the frame.
-            let s = obj.height() as f64 / FRAME.height;
+            // The lockup at MARK_HEIGHT, centred in the allocation.
+            let h = MARK_HEIGHT.min(obj.height() as f64);
+            let w = h * LOCKUP_ASPECT;
+            let x = (obj.width() as f64 - w) / 2.0;
+            let y = (obj.height() as f64 - h) / 2.0;
             snapshot.save();
-            snapshot.translate(&gtk::graphene::Point::new(
-                (-g.inset_x * s) as f32,
-                (-g.inset_y * s) as f32,
-            ));
-            t.snapshot(snapshot, g.width * s, g.height * s);
+            snapshot.translate(&gtk::graphene::Point::new(x as f32, y as f32));
+            t.snapshot(snapshot, w, h);
             snapshot.restore();
         }
     }
 
     impl Lockup {
-        pub(super) fn current(&self) -> Option<(gdk::Texture, Geometry)> {
+        pub(super) fn current(&self) -> Option<gdk::Texture> {
             if adw::StyleManager::default().is_dark() {
-                self.dark.borrow().clone().map(|t| (t, GEOMETRY_DARK))
+                self.dark.borrow().clone()
             } else {
-                self.light.borrow().clone().map(|t| (t, GEOMETRY_LIGHT))
+                self.light.borrow().clone()
             }
         }
     }
@@ -165,28 +146,17 @@ glib::wrapper! {
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
-/// The horizontal lockup (mark + wordmark + slogan), following the light/dark state. `name`
-/// and `slogan` are the texts for assistive technology and for the fallback — two plain labels
-/// in the place of the images, should they fail to decode.
-pub fn lockup(name: &str, slogan: &str) -> gtk::Widget {
+/// The horizontal lockup (mark + name), following the light/dark state. `name` is the text
+/// for assistive technology and for the fallback — a plain label in the place of the image,
+/// should it fail to decode.
+pub fn lockup(name: &str) -> gtk::Widget {
     let (Some(light), Some(dark)) = (texture(LOCKUP_LIGHT), texture(LOCKUP_DARK)) else {
-        let b = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(18)
-            .build();
-        b.append(
-            &gtk::Label::builder()
-                .label(name)
-                .css_classes(["title-1"])
-                .build(),
-        );
-        b.append(
-            &gtk::Label::builder()
-                .label(slogan)
-                .css_classes(["dim-label", "title-4"])
-                .build(),
-        );
-        return b.upcast();
+        return gtk::Label::builder()
+            .label(name)
+            .css_classes(["title-1"])
+            .height_request(LOCKUP_HEIGHT)
+            .build()
+            .upcast();
     };
     let w: Lockup = glib::Object::new();
     {
@@ -195,13 +165,10 @@ pub fn lockup(name: &str, slogan: &str) -> gtk::Widget {
         *imp.light.borrow_mut() = Some(light);
         *imp.dark.borrow_mut() = Some(dark);
     }
-    w.update_property(&[gtk::accessible::Property::Label(&format!(
-        "{name} — {slogan}"
-    ))]);
+    w.update_property(&[gtk::accessible::Property::Label(name)]);
     {
         let w = w.clone();
         adw::StyleManager::default().connect_dark_notify(move |_| {
-            w.queue_resize();
             w.queue_draw();
         });
     }

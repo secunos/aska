@@ -1,9 +1,8 @@
 # Aska grafisk klient — svenska (första ytterligare språket, C-06).
 # Samma nycklar som en.txt. Varje varning säger vad man ska göra åt den.
 
-app.name = Aska
-app.tagline = Anteckningar som inte lämnar några spår
-app.title = aska
+app.name = ASKA
+app.title = ASKA
 
 home.send = Skicka ett meddelande
 home.receive = Ta emot ett meddelande
@@ -18,6 +17,9 @@ home.footer.tor.blocked = Tor: når inte nätverket
 home.footer.tor.down = Tor: kan inte nås
 home.footer.profile = Öppna profil…
 home.settings = Inställningar
+home.doctor.word.refuse = Avvisat:
+home.doctor.word.warn = Varning:
+home.doctor.word.info = Obs:
 home.doctor.recheck = Kontrollera igen
 home.doctor.accept = Godta
 home.doctor.use_tor_browser = Använd Tor Browsers Tor

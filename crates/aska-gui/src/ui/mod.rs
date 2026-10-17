@@ -28,18 +28,24 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
+/// The client's own rules, loaded after the brand palette (brand kit 2.0: 4 px controls, 8 px
+/// cards, banners in the palette's state colours on their tinted grounds).
 const CSS: &str = r#"
-.aska-qr { border: 12px solid white; border-radius: 6px; }
+.aska-qr { border: 12px solid white; border-radius: 4px; }
 .aska-key { min-width: 34px; min-height: 34px; padding: 2px 6px; font-family: monospace; }
 .aska-dots { letter-spacing: 2px; }
-.aska-card { border-radius: 12px; padding: 12px; }
-.aska-card:checked { background: alpha(@accent_bg_color, 0.18); border: 2px solid @accent_bg_color; }
+.aska-card { border-radius: 8px; padding: 12px; }
+.aska-card:checked { background: alpha(@accent_bg_color, 0.12); border: 2px solid @accent_bg_color; }
 .aska-words { font-family: monospace; font-size: 1.05em; }
 .aska-mono { font-family: monospace; }
 .aska-note { font-size: 1.1em; padding: 12px; }
-.aska-banner-warn { background: alpha(@warning_bg_color, 0.25); border-radius: 8px; padding: 8px 12px; }
-.aska-banner-refuse { background: alpha(@error_bg_color, 0.25); border-radius: 8px; padding: 8px 12px; }
-.aska-banner-info { background: alpha(@accent_bg_color, 0.12); border-radius: 8px; padding: 8px 12px; }
+.aska-banner-warn { background: @aska_warning_bg; color: @warning_color; border-radius: 4px; padding: 8px 12px; }
+.aska-banner-refuse { background: @aska_danger_bg; color: @error_color; border-radius: 4px; padding: 8px 12px; }
+.aska-banner-info { background: @aska_info_bg; color: @aska_info; border-radius: 4px; padding: 8px 12px; }
+.aska-dot { font-size: 8px; }
+.aska-dot-ok { color: @success_color; }
+.aska-dot-warn { color: @warning_color; }
+.aska-dot-danger { color: @error_color; }
 "#;
 
 /// A callback installed by one screen for another to trigger.
@@ -67,7 +73,7 @@ impl Ui {
     }
 
     /// Wrap content in a page with a header bar; the visible title is the page title, but the
-    /// window title stays "aska" (§5.7: no title leakage).
+    /// window title stays "ASKA" (§5.7: no title leakage).
     pub fn page(
         &self,
         tag: &str,
@@ -202,11 +208,12 @@ pub fn hint(text: &str) -> gtk::Label {
         .build()
 }
 
-/// The one big action button of a screen.
+/// The one big action button of a screen (a 4 px rectangle since brand 2.0; the name stays
+/// for the call sites).
 pub fn pill(label: &str, suggested: bool) -> gtk::Button {
     let b = gtk::Button::builder()
         .label(label)
-        .css_classes(["pill", "title-4"])
+        .css_classes(["title-4"])
         .halign(gtk::Align::Center)
         .height_request(48)
         .width_request(280)

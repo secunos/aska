@@ -1,7 +1,7 @@
-//! Screen 1 — Home (Client Design §5.1). Identical on every launch: the name, one line, three
-//! buttons, a footer with the build fingerprint prefix and the Tor state, and the doctor's
-//! findings as banners above the footer. There is no list of anything, because there is
-//! nothing to list.
+//! Screen 1 — Home (Client Design §5.1). Identical on every launch: the lockup (mark and
+//! name, nothing else since brand 2.0), four buttons, a footer with the build fingerprint
+//! prefix and the Tor state (a dot and the word), and the doctor's findings as banners above
+//! the footer. There is no list of anything, because there is nothing to list.
 
 use super::{paper, receive, send, settings, shares, Ui};
 use crate::i18n::{tr, trf};
@@ -14,6 +14,7 @@ use std::rc::Rc;
 #[derive(Clone)]
 struct Widgets {
     banners: gtk::Box,
+    tor_dot: gtk::Label,
     tor_label: gtk::Label,
     send_btn: gtk::Button,
 }
@@ -22,8 +23,8 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
     let root = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(18)
-        // 36 until 1.2.1; the lockup (title + slogan) is taller than the title label and the
-        // tagline it replaced, and the buttons below must stay where the GUI gates click them.
+        // 36 until 1.2.1; the lockup block is as tall as the title label and the tagline it
+        // replaced, so the buttons below stay where the GUI gates click them.
         .margin_top(23)
         .margin_bottom(18)
         .margin_start(36)
@@ -31,9 +32,9 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
         .valign(gtk::Align::Fill)
         .build();
 
-    // The brand lockup (1.2.1) — mark, wordmark and slogan — in place of the former `title-1`
-    // label and the tagline below it, at their combined height.
-    let title = super::brand::lockup(&tr("app.name"), &tr("app.tagline"));
+    // The brand lockup — the mark and the name, no tagline (brand 2.0) — in place of the
+    // former `title-1` label and the tagline below it, at their combined height.
+    let title = super::brand::lockup(&tr("app.name"));
     root.append(&title);
 
     let buttons = gtk::Box::builder()
@@ -41,7 +42,7 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
         .spacing(12)
         .halign(gtk::Align::Center)
         .margin_top(24)
-        .width_request(320)
+        .width_request(280)
         .build();
     let send_btn = big_button(&tr("home.send"), true);
     let recv_btn = big_button(&tr("home.receive"), false);
@@ -71,6 +72,12 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
         .css_classes(["dim-label", "caption", "aska-mono"])
         .selectable(true) // the fingerprint is one of the two copyable strings (§5.7)
         .build();
+    // The Tor state: an 8 px dot in the state's colour, always followed by the word (the
+    // colour is never the only signal).
+    let tor_dot = gtk::Label::builder()
+        .label("●")
+        .css_classes(["caption", "aska-dot", "aska-dot-warn"])
+        .build();
     let tor_label = gtk::Label::builder()
         .label(tr("home.footer.tor.checking"))
         .css_classes(["dim-label", "caption"])
@@ -91,6 +98,7 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
         .css_classes(["flat"])
         .build();
     footer.append(&fp_label);
+    footer.append(&tor_dot);
     footer.append(&tor_label);
     footer.append(&profile_btn);
     footer.append(&gear);
@@ -98,6 +106,7 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
 
     let w = Widgets {
         banners,
+        tor_dot,
         tor_label,
         send_btn: send_btn.clone(),
     };
@@ -147,7 +156,7 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
 fn big_button(label: &str, suggested: bool) -> gtk::Button {
     let b = gtk::Button::builder()
         .label(label)
-        .css_classes(["pill", "title-4"])
+        .css_classes(["title-4"])
         .height_request(48)
         .build();
     if suggested {
@@ -160,7 +169,7 @@ fn big_button(label: &str, suggested: bool) -> gtk::Button {
 /// draw the banners. If the system Tor is down or cannot reach the network, try Tor
 /// Browser's Tor as well (D-16): if that one is fine, use it and say so.
 fn run_doctor(ui: &Rc<Ui>, w: &Widgets) {
-    w.tor_label.set_label(&tr("home.footer.tor.checking"));
+    set_tor(w, TorState::Checking, false);
     let cfg_system = ui.app.borrow().tor_config();
     let cfg_tb = aska_core::tor::TorConfig {
         socks: TorSource::TorBrowser.socks(),
@@ -208,14 +217,7 @@ fn run_doctor(ui: &Rc<Ui>, w: &Widgets) {
 fn refresh(ui: &Rc<Ui>, w: &Widgets) {
     let a = ui.app.borrow();
     let via_tb = a.tor_source == TorSource::TorBrowser;
-    w.tor_label.set_label(&tr(match (a.tor_state, via_tb) {
-        (TorState::Checking, _) => "home.footer.tor.checking",
-        (TorState::Ok, true) => "home.footer.tor.tor_browser",
-        (TorState::Ok, false) => "home.footer.tor.ok",
-        (TorState::NoCircuit, _) => "home.footer.tor.no_circuit",
-        (TorState::Blocked, _) => "home.footer.tor.blocked",
-        (TorState::Down, _) => "home.footer.tor.down",
-    }));
+    set_tor(w, a.tor_state, via_tb);
     w.send_btn.set_sensitive(!a.network_refused());
     let findings = a.findings.clone();
     drop(a);
@@ -228,8 +230,26 @@ fn refresh(ui: &Rc<Ui>, w: &Widgets) {
     }
 }
 
+/// The footer's Tor state: the dot's colour and the word.
+fn set_tor(w: &Widgets, state: TorState, via_tor_browser: bool) {
+    let (key, class) = match (state, via_tor_browser) {
+        (TorState::Checking, _) => ("home.footer.tor.checking", "aska-dot-warn"),
+        (TorState::Ok, true) => ("home.footer.tor.tor_browser", "aska-dot-ok"),
+        (TorState::Ok, false) => ("home.footer.tor.ok", "aska-dot-ok"),
+        (TorState::NoCircuit, _) => ("home.footer.tor.no_circuit", "aska-dot-warn"),
+        (TorState::Blocked, _) => ("home.footer.tor.blocked", "aska-dot-danger"),
+        (TorState::Down, _) => ("home.footer.tor.down", "aska-dot-danger"),
+    };
+    for c in ["aska-dot-ok", "aska-dot-warn", "aska-dot-danger"] {
+        w.tor_dot.remove_css_class(c);
+    }
+    w.tor_dot.add_css_class(class);
+    w.tor_label.set_label(&tr(key));
+}
+
 /// One finding as an amber (Warn), red (Refuse) or blue (Info) banner with the action that
-/// fits: Accept for a warning, Check again / Use Tor Browser's Tor for the Tor findings.
+/// fits: Accept for a warning, Check again / Use Tor Browser's Tor for the Tor findings. Every
+/// banner starts with its word (Refused, Warning, Note), so colour is never the only signal.
 fn banner(ui: &Rc<Ui>, w: &Widgets, f: &Finding) -> gtk::Box {
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     row.add_css_class(match f.severity {
@@ -237,7 +257,13 @@ fn banner(ui: &Rc<Ui>, w: &Widgets, f: &Finding) -> gtk::Box {
         Severity::Warn => "aska-banner-warn",
         Severity::Info => "aska-banner-info",
     });
-    let mut text = f.message.clone();
+    let mut text = tr(match f.severity {
+        Severity::Refuse => "home.doctor.word.refuse",
+        Severity::Warn => "home.doctor.word.warn",
+        Severity::Info => "home.doctor.word.info",
+    });
+    text.push(' ');
+    text.push_str(&f.message);
     if f.severity == Severity::Refuse {
         text.push(' ');
         text.push_str(&tr("home.doctor.refused"));
@@ -297,7 +323,7 @@ fn banner(ui: &Rc<Ui>, w: &Widgets, f: &Finding) -> gtk::Box {
 
 /// Re-run the doctor against the currently selected Tor only (after the user chose one).
 fn run_doctor_forced(ui: &Rc<Ui>, w: &Widgets) {
-    w.tor_label.set_label(&tr("home.footer.tor.checking"));
+    set_tor(w, TorState::Checking, false);
     let cfg = DoctorConfig {
         tor: ui.app.borrow().tor_config(),
         relay_addresses: vec![],

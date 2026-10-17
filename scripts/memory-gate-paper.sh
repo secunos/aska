@@ -30,10 +30,10 @@ trap cleanup EXIT
 "$BIN" >/dev/null 2>&1 &
 GUI=$!
 wait_for_window 90 || { echo "GATE FAIL: the Aska window did not appear within 90 s"; save_shot memory-gate-paper-no-window; exit 1; }
-WID="$(xdotool search --name '^aska$' | head -n1)"
+WID="$(xdotool search --name '^ASKA$' | head -n1)"
 # A fixed window geometry so the coordinates below hold (the Paper page widens the window).
 xdotool windowmove "$WID" 0 0; xdotool windowsize "$WID" 1068 720; sleep 1
-xdotool mousemove 380 405 click 1; sleep 2                    # Home: Paper (fourth button)
+xdotool mousemove 534 405 click 1; sleep 2                    # Home: Paper (fourth button; centred in the 1068 px window — the buttons are 280 px wide since 1.2.2)
 xdotool windowsize "$WID" 1068 720; sleep 1
 xdotool mousemove 930 221 click 1; sleep 1                    # Randomness source combo
 xdotool mousemove 985 301 click 1; sleep 1                    # Die rolls (SEEDED)

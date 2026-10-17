@@ -28,7 +28,7 @@ rm -rf "dist/$NAME" && mkdir -p "dist/$NAME/bin" "dist/$NAME/share/applications"
 cp target-gui/release/aska-gui "dist/$NAME/bin/"
 cp target/x86_64-unknown-linux-gnu/release/aska "dist/$NAME/bin/"
 cp deploy/gui/org.aska.Aska.desktop "dist/$NAME/share/applications/"
-# The icon theme (brand kit 1.0, since 1.2.1): PNG 16–512, scalable SVG, symbolic SVG.
+# The icon theme (brand kit 2.0 since 1.2.2; 1.0 in 1.2.1): PNG 16–512, scalable SVG, symbolic SVG.
 cp -R deploy/gui/icons/hicolor "dist/$NAME/share/icons/"
 cp deploy/gui/install.sh "dist/$NAME/"
 mkdir -p "dist/$NAME/docs" && cp docs/USER_GUIDE.md docs/RELAY_OPERATOR_GUIDE.md "dist/$NAME/docs/"

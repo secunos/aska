@@ -2,9 +2,8 @@
 # One entry per line: key = text. {name} marks a value filled in at run time.
 # Every warning says what to do about it.
 
-app.name = Aska
-app.tagline = Notes that leave no trace
-app.title = aska
+app.name = ASKA
+app.title = ASKA
 
 home.send = Send a note
 home.receive = Receive a note
@@ -19,6 +18,9 @@ home.footer.tor.blocked = Tor: cannot reach the network
 home.footer.tor.down = Tor: not reachable
 home.footer.profile = Open profile…
 home.settings = Settings
+home.doctor.word.refuse = Refused:
+home.doctor.word.warn = Warning:
+home.doctor.word.info = Note:
 home.doctor.recheck = Check again
 home.doctor.accept = Accept
 home.doctor.use_tor_browser = Use Tor Browser's Tor

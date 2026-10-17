@@ -51,7 +51,7 @@ pub fn build(ui: &Rc<Ui>, level: Level, for_labels: Vec<String>) -> adw::Navigat
         .build();
     let countdown = gtk::Label::builder().css_classes(["dim-label"]).build();
     let action = gtk::Button::builder()
-        .css_classes(["suggested-action", "pill", "title-4"])
+        .css_classes(["suggested-action", "title-4"])
         .halign(gtk::Align::Center)
         .height_request(48)
         .width_request(280)

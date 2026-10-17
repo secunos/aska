@@ -1,121 +1,145 @@
 {
   "name": "Aska",
-  "version": "1.0.0",
-  "scales": {
-    "ash": {
-      "0": "#FAFBFC",
-      "50": "#F1F3F5",
-      "100": "#E1E5EA",
-      "200": "#CDD2D8",
-      "300": "#AEB5BE",
-      "400": "#8A929C",
-      "500": "#626A74",
-      "600": "#454B53",
-      "700": "#2E343B",
-      "800": "#20252B",
-      "900": "#16191E",
-      "950": "#0E1013"
-    },
-    "ember": {
-      "200": "#FFE6C4",
-      "300": "#FFB27A",
-      "400": "#F58B4C",
-      "500": "#E0682C",
-      "600": "#B4501E",
-      "700": "#7E3712"
-    }
+  "version": "2.0.0",
+  "graphite": {
+    "0": "#FFFFFF",
+    "50": "#F5F5F5",
+    "100": "#EBEBEB",
+    "200": "#DEDEDE",
+    "300": "#BDBDBD",
+    "400": "#9A9A9A",
+    "500": "#666666",
+    "600": "#4A4A4A",
+    "700": "#2A2A2A",
+    "800": "#1E1E1E",
+    "900": "#161616",
+    "950": "#0B0B0B"
   },
   "brand": {
-    "ember-core": "#E0682C",
-    "ember-glow": "#F58B4C",
-    "tile-top": "#2C323A",
-    "tile-bottom": "#14171B"
+    "ink": "#111111",
+    "paper": "#FFFFFF"
   },
   "roles": {
     "background": {
-      "light": "#FAFBFC",
-      "dark": "#16191E",
+      "light": "#FFFFFF",
+      "dark": "#0B0B0B",
       "use": "Window background"
     },
     "surface": {
-      "light": "#FFFFFF",
-      "dark": "#20252B",
+      "light": "#F5F5F5",
+      "dark": "#161616",
       "use": "Editor, cards, header bar"
     },
     "surface-alt": {
-      "light": "#F1F3F5",
-      "dark": "#1B1F24",
-      "use": "Secondary panels, table headers"
+      "light": "#EBEBEB",
+      "dark": "#1E1E1E",
+      "use": "Secondary buttons, table headers"
     },
     "border": {
-      "light": "#E1E5EA",
-      "dark": "#2E343B",
+      "light": "#DEDEDE",
+      "dark": "#2A2A2A",
       "use": "Dividers, field outlines"
     },
+    "border-strong": {
+      "light": "#808080",
+      "dark": "#666666",
+      "use": "Outline of fields and the secondary button (3:1)"
+    },
     "text": {
-      "light": "#1B1F24",
-      "dark": "#E6E9ED",
+      "light": "#111111",
+      "dark": "#F2F2F2",
       "use": "Note text, labels"
     },
     "text-muted": {
-      "light": "#626A74",
-      "dark": "#959DA7",
-      "use": "Tagline, footer, byte counter"
+      "light": "#666666",
+      "dark": "#9A9A9A",
+      "use": "Footer, byte counter, hints"
     },
     "accent": {
-      "light": "#B4501E",
-      "dark": "#F58B4C",
-      "use": "Main action, focus ring, links"
+      "light": "#111111",
+      "dark": "#F2F2F2",
+      "use": "Main button, focus ring, links"
     },
     "on-accent": {
       "light": "#FFFFFF",
-      "dark": "#121519",
-      "use": "Label on an accent button"
-    },
-    "button": {
-      "light": "#E9ECEF",
-      "dark": "#2A3037",
-      "use": "Secondary button background"
+      "dark": "#0B0B0B",
+      "use": "Label on the main button"
     },
     "info": {
-      "light": "#3F6F96",
+      "light": "#3D6A8F",
       "dark": "#8DB4D6",
-      "use": "Blue banner, information"
+      "use": "Blue banner"
+    },
+    "info-bg": {
+      "light": "#EEF3F8",
+      "dark": "#111A22",
+      "use": "Blue banner background"
     },
     "success": {
-      "light": "#2B7653",
-      "dark": "#6CC49A",
+      "light": "#2E7D4F",
+      "dark": "#6FCF97",
       "use": "Tor connected, posted"
     },
     "warning": {
-      "light": "#866500",
-      "dark": "#E6C04A",
-      "use": "Amber doctor banner"
+      "light": "#6E5600",
+      "dark": "#E8C547",
+      "use": "Amber banner"
     },
     "warning-bg": {
-      "light": "#FBF3D9",
-      "dark": "#2E2915",
+      "light": "#FAF6E6",
+      "dark": "#1D1A0E",
       "use": "Amber banner background"
     },
     "danger": {
-      "light": "#B0323C",
-      "dark": "#F2878C",
-      "use": "Red refusal banner, Close and burn"
+      "light": "#B3261E",
+      "dark": "#FF8A80",
+      "use": "Red banner, Close and burn"
+    },
+    "danger-bg": {
+      "light": "#FCEFEE",
+      "dark": "#2A1312",
+      "use": "Red banner background"
+    },
+    "on-danger": {
+      "light": "#FFFFFF",
+      "dark": "#0B0B0B",
+      "use": "Label on a danger fill"
     }
   },
   "typography": {
     "wordmark": {
-      "family": "Outfit",
-      "weight": 500,
-      "note": "Logo only; outlined in the SVGs."
-    },
-    "slogan": {
-      "text": "Notes that leave no trace",
-      "family": "Outfit",
+      "family": "Jost",
       "weight": 500,
       "case": "uppercase",
-      "tracking_em": 0.14
+      "tracking_em": 0.22,
+      "note": "Logo only; outlined in the SVGs."
     },
-    "ui": "System font on each platform (Adwaita Sans/Cantarell, Segoe UI, Roboto, SF Pro)."
+    "display": {
+      "family": "Jost",
+      "weight": 500,
+      "case": "uppercase",
+      "tracking_em": 0.12,
+      "use": "Headings on the website, documents, release notes."
+    },
+    "ui": "System font: Adwaita Sans/Cantarell (GNOME), Segoe UI (Windows), Roboto (Android), SF Pro (iOS).",
+    "mono": {
+      "family": "JetBrains Mono",
+      "use": "Fingerprints, keys, relay addresses, build hashes."
+    }
+  },
+  "spacing_px": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48,
+    64
+  ],
+  "radius_px": {
+    "control": 4,
+    "card": 8,
+    "app_tile_of_512": 112
   }
 }

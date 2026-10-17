@@ -41,7 +41,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 const LONG_ABOUT: &str = "\
-Aska — notes that leave no trace.
+ASKA — secure notes that leave nothing behind.
 
 Nothing is stored: no history, no contacts, no cache, no log. A note exists on the relay as
 ciphertext until it expires, and on screen while you look at it. Every command first runs the
@@ -77,7 +77,7 @@ Hand-over material is then printed as `KEYCARD …`, `WORDS …`, `SHARE i/n …
   paper share-cards: Share lines until EOF (with --rows: card text; otherwise sheets).";
 
 #[derive(Parser)]
-#[command(name = "aska", version, about = "Aska — notes that leave no trace. Command-line client.", long_about = LONG_ABOUT)]
+#[command(name = "aska", version, about = "ASKA secure notes — command-line client", long_about = LONG_ABOUT)]
 struct Cli {
     #[command(flatten)]
     g: GlobalArgs,
