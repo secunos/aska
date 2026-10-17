@@ -12,9 +12,9 @@ This release, like every one before it, **has not been independently audited** a
 
 ```
 Tarball        aska-gui-1.2.1-linux-x86_64.tar.gz
-SHA-256        (filled at signing)
+SHA-256        79f545c3e495688ae0962902a968d0e0a525bcdbf00a8a1f7e75b3592484e1fd
 Relay binary   aska-drop-1.2.1-linux-x86_64
-SHA-256        (filled at signing)
+SHA-256        18ae16ead0fe3d32b7ef814a4f58afb6b0165f23fddbd25bd11d796198b96a72
 Signing key    79AD6224AFF176C9   (unchanged)
 Public key     RWTJdvGvJGKtecwP4zEITLdIK5yvwDp8+PyjmaoWPMHPLJxHDbGs+Oox
 Rekor entry    none for this release
