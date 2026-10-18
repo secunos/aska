@@ -181,8 +181,8 @@ mod tests {
 
     #[test]
     fn full_entropy_is_near_the_cap_and_constant_is_refused() {
-        let mut v = vec![0u8; 65536];
-        getrandom::getrandom(&mut v).unwrap();
+        // A fixed full-entropy stream (see `entropy::test_bytes`), not the OS generator.
+        let v = crate::entropy::test_bytes(65536, "estimate");
         let r = min_entropy(&v).unwrap();
         // With 65 536 samples over 256 values the confidence bound on the most common value
         // keeps the MCV figure near 7.5 bits, so the halved estimate lands just under the cap.

@@ -516,6 +516,21 @@ impl DigitStream for Mixed<'_> {
     }
 }
 
+/// Deterministic "random-looking" bytes for the crate's tests: SHAKE256 of a fixed label.
+/// The statistical tests below used to draw from the OS generator, which gave every CI run a
+/// small chance (about one in three hundred per health test) of a spurious failure — one
+/// struck on 17 October 2026, on the tag-push run of 1.2.2. A fixed stream has the same
+/// statistics and a fixed verdict.
+#[cfg(test)]
+pub(crate) fn test_bytes(n: usize, label: &str) -> Vec<u8> {
+    let mut h = sha3::Shake256::default();
+    h.update(b"aska/paper/test-bytes/");
+    h.update(label.as_bytes());
+    let mut out = vec![0u8; n];
+    h.finalize_xof().read(&mut out);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -101,8 +101,8 @@ mod tests {
 
     #[test]
     fn os_digits_pass_and_patterns_fail() {
-        let mut bytes = vec![0u8; 20_000];
-        getrandom::getrandom(&mut bytes).unwrap();
+        // A fixed full-entropy stream (see `entropy::test_bytes`), not the OS generator.
+        let bytes = crate::entropy::test_bytes(20_000, "stats");
         let digits: Vec<u8> = bytes
             .iter()
             .filter(|&&b| b < 250)

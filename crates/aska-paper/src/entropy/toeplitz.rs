@@ -116,8 +116,7 @@ mod tests {
     fn output_of_a_biased_source_looks_uniform() {
         // Input bits are 1 with probability ~0.9 (min-entropy ≈ 0.15 bit/bit); extract 1/16 of
         // the length and check the output bits are balanced.
-        let mut seed = vec![0u8; seed_len_bytes(8192)];
-        getrandom::getrandom(&mut seed).unwrap();
+        let seed = crate::entropy::test_bytes(seed_len_bytes(8192), "toeplitz");
         let mut lcg: u64 = 0x9e37_79b9_7f4a_7c15;
         let mut ones = 0usize;
         let mut total = 0usize;
