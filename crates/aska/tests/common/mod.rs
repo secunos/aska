@@ -172,8 +172,26 @@ impl Bench {
     }
 
     /// As `aska_in`, with extra environment variables (doctor trigger tests).
+    ///
+    /// A booklet generation (`paper generate`) that the pad's own health tests refuse is
+    /// retried, up to three attempts in all. The tests are deliberately strict (0.1 % false
+    /// alarm each, DC-04 §8) and the booklet's digits are fresh randomness every time, so about
+    /// one booklet in three hundred is refused by design and the user is told to make another
+    /// — a CI run that generates ten booklets would otherwise fail spuriously a few times in a
+    /// hundred (it did, on 18 October 2026). The retry is here, in the harness, never in the
+    /// binary: the release carries no deterministic or lenient mode.
     pub fn aska_env(&self, cwd: &Path, args: &[&str], stdin: &str, env: &[(&str, &str)]) -> Out {
-        self.run(cwd, args, stdin, env, Stdio::piped())
+        let generates = args.contains(&"paper") && args.contains(&"generate");
+        let mut out = self.run(cwd, args, stdin, env, Stdio::piped());
+        let mut attempts = 1;
+        while generates && attempts < 3 && out.stderr.contains("aska: randomness:") {
+            eprintln!(
+                "note: the booklet was refused by its health tests (attempt {attempts}); making another"
+            );
+            out = self.run(cwd, args, stdin, env, Stdio::piped());
+            attempts += 1;
+        }
+        out
     }
 
     /// As `aska`, with standard output connected to a pipe whose reading end is already

@@ -51,7 +51,19 @@ import -window root "$SHOT"
 PAYLOAD="$(zbarimg -q --raw "$SHOT" 2>/dev/null | head -1 | tr -d '\n')"
 case "$PAYLOAD" in
   1[0-9]*) ;;
-  *) echo "GATE FAIL: no page QR on screen"; save_shot memory-gate-paper-no-qr; exit 1 ;;
+  *)
+    # The pad's health tests refuse about one booklet in three hundred by design (DC-04 §8:
+    # strict tests, fresh digits every time; the user is told to make another). Make another
+    # once before calling it a failure.
+    echo "note: no page QR on the first attempt; making the booklet again"
+    xdotool mousemove 533 145 click 1; sleep 4                # Make the booklet (again)
+    xdotool mousemove 111 297 click 1; sleep 2                # Show for copying…
+    import -window root "$SHOT"
+    PAYLOAD="$(zbarimg -q --raw "$SHOT" 2>/dev/null | head -1 | tr -d '\n')"
+    case "$PAYLOAD" in
+      1[0-9]*) ;;
+      *) echo "GATE FAIL: no page QR on screen"; save_shot memory-gate-paper-no-qr; exit 1 ;;
+    esac ;;
 esac
 scan() { python3 scripts/memscan-paper.py "$GUI" "$PAYLOAD" "$1" || true; }
 scan "1 hand-copy view open (the booklet and the row texts are live)"
