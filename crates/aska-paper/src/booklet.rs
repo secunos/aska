@@ -261,6 +261,25 @@ mod tests {
         Shake(h.finalize_xof(), 0)
     }
 
+    /// A booklet's digits are fresh randomness and the pad's health tests are deliberately
+    /// strict (DC-04 §8: about one booklet in three hundred is refused by design, and the user
+    /// makes another). The tests do the same, up to three attempts, so that a by-design
+    /// refusal is not a test failure — the binaries keep no deterministic or lenient mode.
+    fn with_retry<T>(mut make: impl FnMut() -> Result<T, PaperError>) -> T {
+        let mut last = None;
+        for _ in 0..3 {
+            match make() {
+                Ok(b) => return b,
+                Err(PaperError::Entropy(e)) => {
+                    eprintln!("note: booklet refused by its health tests ({e}); making another");
+                    last = Some(PaperError::Entropy(e));
+                }
+                Err(e) => panic!("{e:?}"),
+            }
+        }
+        panic!("three booklets in a row refused by the health tests: {last:?}");
+    }
+
     #[test]
     fn physical_booklet_round_trip() {
         let spec = BookletSpec {
@@ -270,7 +289,7 @@ mod tests {
             hand_tag: true,
         };
         let mut calls = 0;
-        let b = generate_physical(spec, &mut shake("booklet"), |_| calls += 1).unwrap();
+        let b = with_retry(|| generate_physical(spec, &mut shake("booklet"), |_| calls += 1));
         assert!(calls > 0);
         assert_eq!(b.label, Label::Physical);
         assert_eq!(b.pages.len(), 4);
@@ -316,7 +335,7 @@ mod tests {
             pad_len: 400,
             hand_tag: false,
         };
-        let b = generate_seeded(spec, entropy::Seeded::from_dice(&rolls).unwrap()).unwrap();
+        let b = with_retry(|| generate_seeded(spec, entropy::Seeded::from_dice(&rolls).unwrap()));
         assert_eq!(b.label, Label::Seeded);
         assert!(b.pages[0].hand_keys().is_none());
         assert!(b.set_code <= 9999);

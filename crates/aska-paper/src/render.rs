@@ -537,9 +537,11 @@ mod tests {
 
     #[test]
     fn block_and_share_cards_render_and_decode() {
-        let mut block = vec![0u8; 4096];
-        getrandom::getrandom(&mut block).unwrap();
-        let chunks = crate::cards::split_block(&block).unwrap();
+        // A fixed random-looking Block (see `entropy::test_bytes`): the independent decoder
+        // used for this cross-check (`rqrr`) failed on one sheet in roughly a hundred with
+        // fresh random content, which made the test flaky; a fixed input has a fixed verdict.
+        let block = crate::entropy::test_bytes(4096, "block-cards");
+        let chunks = crate::cards::split_block_with_id(&block, [0x41, 0x53, 0x4b, 0x41]).unwrap();
         let sheets = render_block_cards(&chunks, &RenderOptions::default()).unwrap();
         assert_eq!(sheets.len(), 1);
         // Each of the four codes on the sheet decodes to its chunk (one grid per quadrant).
@@ -558,6 +560,23 @@ mod tests {
         let mut want: Vec<Vec<u8>> = chunks.iter().map(|c| c.to_vec()).collect();
         want.sort();
         assert_eq!(img, want);
+        // The way a camera sees it — one card at a time — through the clients' own entry
+        // point: each quadrant decodes to one of the chunks. (Whole-sheet grid detection of
+        // four version-40 codes missed one on about one random sheet in thirteen in a probe;
+        // single codes decoded 160 of 160.)
+        let (cw, ch) = (w / 2, h / 2);
+        for qy in 0..2 {
+            for qx in 0..2 {
+                let mut crop = vec![255u8; cw * ch];
+                for y in 0..ch {
+                    for x in 0..cw {
+                        crop[y * cw + x] = luma[(qy * ch + y) * w + qx * cw + x];
+                    }
+                }
+                let got = aska_scan::decode_luma_bytes(cw, ch, &crop).expect("one card decodes");
+                assert!(chunks.iter().any(|c| c[..] == got[..]));
+            }
+        }
         let big = vec![1u8; 16384];
         assert_eq!(
             render_block_cards(

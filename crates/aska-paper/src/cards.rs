@@ -45,13 +45,22 @@ pub fn crc32(data: &[u8]) -> u32 {
 
 /// Cut a Block into card chunks. The set id comes from the OS generator.
 pub fn split_block(block: &[u8]) -> Result<Vec<Zeroizing<Vec<u8>>>, PaperError> {
+    let mut id = [0u8; 4];
+    getrandom::getrandom(&mut id).map_err(|_| PaperError::Rng)?;
+    split_block_with_id(block, id)
+}
+
+/// `split_block` with a caller-supplied set id (the tests use a fixed one so that a rendered
+/// sheet is byte-for-byte the same on every run; the clients always call `split_block`).
+pub(crate) fn split_block_with_id(
+    block: &[u8],
+    id: [u8; 4],
+) -> Result<Vec<Zeroizing<Vec<u8>>>, PaperError> {
     let class = SizeClass::from_len(block.len()).ok_or(PaperError::Card("not a Block"))?;
     if class == SizeClass::C3 {
         return Err(PaperError::Card("class 3 is not offered on paper"));
     }
     let count = block.len() / CHUNK_DATA;
-    let mut id = [0u8; 4];
-    getrandom::getrandom(&mut id).map_err(|_| PaperError::Rng)?;
     let mut out = Vec::with_capacity(count);
     for (i, data) in block.chunks(CHUNK_DATA).enumerate() {
         let mut c = Zeroizing::new(Vec::with_capacity(CHUNK_LEN));
