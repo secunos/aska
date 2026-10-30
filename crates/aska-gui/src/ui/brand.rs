@@ -1,33 +1,34 @@
-//! The Aska brand (brand kit 2.0, release 1.2.2): the Graphite palette as libadwaita colour
-//! overrides, swapped with the style manager's light/dark state, and the horizontal lockup —
-//! the Fade mark and the name ASKA, nothing else — for the Home screen. Everything is embedded
-//! in the binary: no file is read at run time and no font is needed (the name is outlines).
+//! The Aska brand (brand kit 3.0, release 1.2.3): the palette — black and white with the one
+//! signal yellow — as libadwaita colour overrides, swapped with the style manager's light/dark
+//! state, and the **stacked** lockup (the Perforerad mark with the name ASKA below it, nothing
+//! else) for the Home screen. Everything is embedded in the binary: no file is read at run
+//! time and no font is needed (the name is outlines).
 //!
-//! Brand kit 1.0 (release 1.2.1: the Glow mark, the Nordic calm palette, a slogan under the
-//! lockup) was superseded by the brand guidelines 2.0 on 17 October 2026.
+//! History: brand kit 1.0 (1.2.1: the Glow mark, a slogan) → 2.0 (1.2.2: the Fade mark, the
+//! horizontal lockup) → 3.0 (1.2.3: the Perforerad mark, the stacked lockup, signal yellow).
 
 use adw::prelude::*;
 use gtk::{gdk, glib};
 
 const LIGHT_CSS: &str = include_str!("../../brand/aska.css");
 const DARK_CSS: &str = include_str!("../../brand/aska-dark.css");
-/// Black lockup for light grounds, white lockup for dark grounds (the kit has no colour
-/// version). Both files share one geometry.
-const LOCKUP_LIGHT: &[u8] = include_bytes!("../../brand/aska-horizontal-black.png");
-const LOCKUP_DARK: &[u8] = include_bytes!("../../brand/aska-horizontal-white.png");
+/// The stacked lockup: black on light grounds, the signal version (yellow mark, white name) on
+/// dark grounds — the brand version on dark per the guidelines. Both files share one geometry
+/// (900 × 862 px; the mark fills rows 6–520, the name 693–855).
+const LOCKUP_LIGHT: &[u8] = include_bytes!("../../brand/aska-stacked-black.png");
+const LOCKUP_DARK: &[u8] = include_bytes!("../../brand/aska-stacked-signal.png");
 
-/// Height of the header block on the Home screen, in pixels: the height of the former title
-/// label plus the tagline line that 1.x showed under it, kept so that the buttons below do not
-/// move (the GUI gates click them by coordinate). The lockup is drawn centred inside it.
-pub const LOCKUP_HEIGHT: i32 = 84;
+/// Height of the header block on the Home screen, in pixels, and of the lockup drawn in it.
+/// The guidelines put the mark at 72 px on Home; the mark is 514/862 of the stacked image, so
+/// the whole lockup is 120 px (1.2.1–1.2.2 used an 84 px block; the buttons below moved down
+/// by 36 px with 1.2.3 and the GUI gates' coordinates with them).
+pub const LOCKUP_HEIGHT: i32 = 120;
 
-/// Height at which the lockup is drawn: the guidelines put the mark at 64 px on Home, and the
-/// mark spans the lockup's full height.
-const MARK_HEIGHT: f64 = 64.0;
+/// Height at which the lockup is drawn (the whole block).
+const DRAW_HEIGHT: f64 = 120.0;
 
-/// Aspect ratio (width / height) of the lockup images, from the kit's `viewBox`
-/// (`-3 -95.75 483.87 119.1`).
-const LOCKUP_ASPECT: f64 = 483.87 / 119.1;
+/// Aspect ratio (width / height) of the lockup images (900 / 862).
+const LOCKUP_ASPECT: f64 = 900.0 / 862.0;
 
 /// Install the brand palette for the display and keep it in step with light/dark changes.
 /// `app_css` is the client's own rule set, loaded after the palette so that it can refer to
@@ -105,7 +106,7 @@ mod imp {
 
         fn measure(&self, orientation: gtk::Orientation, _for_size: i32) -> (i32, i32, i32, i32) {
             let h = LOCKUP_HEIGHT;
-            let w = (MARK_HEIGHT * LOCKUP_ASPECT).round() as i32;
+            let w = (DRAW_HEIGHT * LOCKUP_ASPECT).round() as i32;
             match orientation {
                 gtk::Orientation::Horizontal => (w, w, -1, -1),
                 _ => (h, h, -1, -1),
@@ -117,8 +118,8 @@ mod imp {
             let Some(t) = self.current() else {
                 return;
             };
-            // The lockup at MARK_HEIGHT, centred in the allocation.
-            let h = MARK_HEIGHT.min(obj.height() as f64);
+            // The lockup at DRAW_HEIGHT, centred in the allocation.
+            let h = DRAW_HEIGHT.min(obj.height() as f64);
             let w = h * LOCKUP_ASPECT;
             let x = (obj.width() as f64 - w) / 2.0;
             let y = (obj.height() as f64 - h) / 2.0;

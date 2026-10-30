@@ -1,6 +1,6 @@
 # Aska — User Guide
 
-## Version 1.2 — for Aska 1.2.0, 1.2.1 and 1.2.2 (Linux x86-64)
+## Version 1.2 — for Aska 1.2.0, 1.2.1, 1.2.2 and 1.2.3 (Linux x86-64)
 
 Aska sends a short note to one person, or to a small group, in a way that leaves nothing behind. The note is encrypted on your computer, parked as unreadable noise on a relay that is reachable only through Tor, fetched by the receiver, shown on their screen, and gone. Aska keeps no history, no contacts, no account, no log, and writes nothing to disk unless you ask it to. Since 1.2 it can also make a **one-time pad on paper**, for messages that must be exchanged with no computer at all (chapter 11).
 
@@ -86,7 +86,7 @@ sha256sum -c SHA256SUMS            # both lines: OK
 
 ## 3.4 First start
 
-Start Aska from your desktop's application menu (the entry is **ASKA**, with the dot-grid icon; the window title is ASKA on every screen), or with `aska-gui` in a terminal. The Home screen shows the mark and the name above four buttons; there is no list of anything, because nothing is kept. Every start runs the **environment checks** (section 4) and shows their findings as banners on the Home screen.
+Start Aska from your desktop's application menu (the entry is **ASKA**, with the perforated-plate icon on a yellow tile; the window title is ASKA on every screen), or with `aska-gui` in a terminal. The Home screen shows the mark with the name below it, above four buttons; there is no list of anything, because nothing is kept. Every start runs the **environment checks** (section 4) and shows their findings as banners on the Home screen.
 
 Open **Settings** (the gear) → **Verify this app**. It must say
 

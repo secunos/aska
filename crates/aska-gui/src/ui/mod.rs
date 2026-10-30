@@ -28,20 +28,21 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
-/// The client's own rules, loaded after the brand palette (brand kit 2.0: 4 px controls, 8 px
-/// cards, banners in the palette's state colours on their tinted grounds).
+/// The client's own rules, loaded after the brand palette (brand kit 3.0: 2 px controls, 4 px
+/// cards, banners in the palette's state colours on their tinted grounds; the warning colour
+/// is orange, deliberately not the brand's yellow).
 const CSS: &str = r#"
-.aska-qr { border: 12px solid white; border-radius: 4px; }
+.aska-qr { border: 12px solid white; border-radius: 2px; }
 .aska-key { min-width: 34px; min-height: 34px; padding: 2px 6px; font-family: monospace; }
 .aska-dots { letter-spacing: 2px; }
-.aska-card { border-radius: 8px; padding: 12px; }
+.aska-card { border-radius: 4px; padding: 12px; }
 .aska-card:checked { background: alpha(@accent_bg_color, 0.12); border: 2px solid @accent_bg_color; }
 .aska-words { font-family: monospace; font-size: 1.05em; }
 .aska-mono { font-family: monospace; }
 .aska-note { font-size: 1.1em; padding: 12px; }
-.aska-banner-warn { background: @aska_warning_bg; color: @warning_color; border-radius: 4px; padding: 8px 12px; }
-.aska-banner-refuse { background: @aska_danger_bg; color: @error_color; border-radius: 4px; padding: 8px 12px; }
-.aska-banner-info { background: @aska_info_bg; color: @aska_info; border-radius: 4px; padding: 8px 12px; }
+.aska-banner-warn { background: @aska_warning_bg; color: @warning_color; border-radius: 2px; padding: 8px 12px; }
+.aska-banner-refuse { background: @aska_danger_bg; color: @error_color; border-radius: 2px; padding: 8px 12px; }
+.aska-banner-info { background: @aska_info_bg; color: @aska_info; border-radius: 2px; padding: 8px 12px; }
 .aska-dot { font-size: 8px; }
 .aska-dot-ok { color: @success_color; }
 .aska-dot-warn { color: @warning_color; }

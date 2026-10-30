@@ -1,6 +1,6 @@
 {
-  "name": "Aska",
-  "version": "2.0.0",
+  "name": "ASKA",
+  "version": "3.0.0",
   "graphite": {
     "0": "#FFFFFF",
     "50": "#F5F5F5",
@@ -17,7 +17,8 @@
   },
   "brand": {
     "ink": "#111111",
-    "paper": "#FFFFFF"
+    "paper": "#FFFFFF",
+    "signal": "#F2C230"
   },
   "roles": {
     "background": {
@@ -33,12 +34,12 @@
     "surface-alt": {
       "light": "#EBEBEB",
       "dark": "#1E1E1E",
-      "use": "Secondary buttons, table headers"
+      "use": "Secondary buttons, keypad keys, table headers"
     },
     "border": {
       "light": "#DEDEDE",
       "dark": "#2A2A2A",
-      "use": "Dividers, field outlines"
+      "use": "Dividers and hairlines"
     },
     "border-strong": {
       "light": "#808080",
@@ -48,22 +49,37 @@
     "text": {
       "light": "#111111",
       "dark": "#F2F2F2",
-      "use": "Note text, labels"
+      "use": "Body text, labels, headings"
     },
     "text-muted": {
       "light": "#666666",
       "dark": "#9A9A9A",
-      "use": "Footer, byte counter, hints"
+      "use": "Footer, counters, hints"
     },
     "accent": {
       "light": "#111111",
-      "dark": "#F2F2F2",
-      "use": "Main button, focus ring, links"
+      "dark": "#F2C230",
+      "use": "Main button fill"
     },
     "on-accent": {
-      "light": "#FFFFFF",
-      "dark": "#0B0B0B",
-      "use": "Label on the main button"
+      "light": "#F2C230",
+      "dark": "#111111",
+      "use": "Main button label"
+    },
+    "focus-ring": {
+      "light": "#111111",
+      "dark": "#F2C230",
+      "use": "Focus ring, 2 px"
+    },
+    "signal": {
+      "light": "#F2C230",
+      "dark": "#F2C230",
+      "use": "Signal yellow: the mark, the app tile, highlights. Never as text on light grounds"
+    },
+    "on-signal": {
+      "light": "#111111",
+      "dark": "#111111",
+      "use": "Text and mark on signal yellow"
     },
     "info": {
       "light": "#3D6A8F",
@@ -81,14 +97,14 @@
       "use": "Tor connected, posted"
     },
     "warning": {
-      "light": "#6E5600",
-      "dark": "#E8C547",
-      "use": "Amber banner"
+      "light": "#8A4B00",
+      "dark": "#FFB15C",
+      "use": "Orange warning banner"
     },
     "warning-bg": {
-      "light": "#FAF6E6",
-      "dark": "#1D1A0E",
-      "use": "Amber banner background"
+      "light": "#FDF1E4",
+      "dark": "#24180C",
+      "use": "Warning banner background"
     },
     "danger": {
       "light": "#B3261E",
@@ -108,20 +124,21 @@
   },
   "typography": {
     "wordmark": {
-      "family": "Jost",
-      "weight": 500,
+      "family": "Archivo",
+      "width": 125,
+      "weight": 600,
       "case": "uppercase",
-      "tracking_em": 0.22,
+      "tracking_em": 0.14,
       "note": "Logo only; outlined in the SVGs."
     },
     "display": {
-      "family": "Jost",
-      "weight": 500,
+      "family": "Archivo",
+      "width": 125,
+      "weight": 600,
       "case": "uppercase",
-      "tracking_em": 0.12,
-      "use": "Headings on the website, documents, release notes."
+      "tracking_em": 0.08
     },
-    "ui": "System font: Adwaita Sans/Cantarell (GNOME), Segoe UI (Windows), Roboto (Android), SF Pro (iOS).",
+    "ui": "System font: Adwaita Sans/Cantarell, Segoe UI, Roboto, SF Pro.",
     "mono": {
       "family": "JetBrains Mono",
       "use": "Fingerprints, keys, relay addresses, build hashes."
@@ -138,8 +155,8 @@
     64
   ],
   "radius_px": {
-    "control": 4,
-    "card": 8,
+    "control": 2,
+    "card": 4,
     "app_tile_of_512": 112
   }
 }

@@ -1,5 +1,6 @@
-//! Screen 1 — Home (Client Design §5.1). Identical on every launch: the lockup (mark and
-//! name, nothing else since brand 2.0), four buttons, a footer with the build fingerprint
+//! Screen 1 — Home (Client Design §5.1). Identical on every launch: the stacked lockup (the
+//! mark with the name below it, nothing else since brand 2.0; the stacked form since 3.0), four
+//! buttons, a footer with the build fingerprint
 //! prefix and the Tor state (a dot and the word), and the doctor's findings as banners above
 //! the footer. There is no list of anything, because there is nothing to list.
 
@@ -23,8 +24,9 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
     let root = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(18)
-        // 36 until 1.2.1; the lockup block is as tall as the title label and the tagline it
-        // replaced, so the buttons below stay where the GUI gates click them.
+        // 36 until 1.2.1, 23 in 1.2.1–1.2.2 (an 84 px lockup block in place of title + tagline);
+        // 1.2.3 draws the stacked lockup in a 120 px block, so the buttons sit 36 px lower than
+        // in 1.2.0–1.2.2 and the GUI gates click 36 px lower.
         .margin_top(23)
         .margin_bottom(18)
         .margin_start(36)
@@ -32,8 +34,8 @@ pub fn build(ui: &Rc<Ui>) -> adw::NavigationPage {
         .valign(gtk::Align::Fill)
         .build();
 
-    // The brand lockup — the mark and the name, no tagline (brand 2.0) — in place of the
-    // former `title-1` label and the tagline below it, at their combined height.
+    // The brand lockup — the mark with the name below it, no tagline — in place of the former
+    // `title-1` label and the tagline below it.
     let title = super::brand::lockup(&tr("app.name"));
     root.append(&title);
 

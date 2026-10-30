@@ -1,13 +1,13 @@
-/* Aska 2.0 for GTK 4 / libadwaita (light). Load with a CssProvider at
+/* ASKA 3.0 for GTK 4 / libadwaita (light). Load with a CssProvider at
    STYLE_PROVIDER_PRIORITY_APPLICATION and swap light/dark when AdwStyleManager:dark changes. */
 @define-color accent_color #111111;
 @define-color accent_bg_color #111111;
-@define-color accent_fg_color #FFFFFF;
+@define-color accent_fg_color #F2C230;
 @define-color destructive_color #B3261E;
 @define-color destructive_bg_color #B3261E;
 @define-color destructive_fg_color #FFFFFF;
 @define-color success_color #2E7D4F;
-@define-color warning_color #6E5600;
+@define-color warning_color #8A4B00;
 @define-color error_color #B3261E;
 @define-color window_bg_color #FFFFFF;
 @define-color window_fg_color #111111;
@@ -23,13 +23,15 @@
 @define-color popover_bg_color #F5F5F5;
 @define-color popover_fg_color #111111;
 
+@define-color aska_signal #F2C230;
 @define-color aska_muted #666666;
 @define-color aska_info #3D6A8F;
 @define-color aska_info_bg #EEF3F8;
-@define-color aska_warning_bg #FAF6E6;
+@define-color aska_warning_bg #FDF1E4;
 @define-color aska_danger_bg #FCEFEE;
 
-/* Shape: square-ish controls, no pill buttons. */
-button { border-radius: 4px; }
-.card, .boxed-list { border-radius: 8px; }
+/* Shape: square controls (2 px), no pills. Focus ring #111111. */
+button { border-radius: 2px; }
+.card, .boxed-list { border-radius: 4px; }
+*:focus-visible { outline: 2px solid #111111; outline-offset: 2px; }
 .dim-label, .aska-muted { color: @aska_muted; opacity: 1; }

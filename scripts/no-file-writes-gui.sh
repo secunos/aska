@@ -51,7 +51,7 @@ sleep 1
 strace -f -yy -e trace=%file,write,writev,pwrite64,pwritev,connect -o "$LOG" "$BIN" >/dev/null 2>/dev/null &
 GUI=$!
 wait_for_window 90 || { echo "GATE FAIL: the Aska window did not appear within 90 s"; save_shot "$(basename "$0" .sh)-no-window"; exit 1; }
-xdotool mousemove 380 224 click 1; sleep 2                    # Send a note
+xdotool mousemove 380 260 click 1; sleep 2                    # Send a note (y 224 until 1.2.2; the 1.2.3 lockup block is 36 px taller)
 xdotool mousemove 380 220 click 1; xdotool type --delay 20 -- "file gate: the north gate"; sleep 1
 xdotool mousemove 380 400; for _ in 1 2 3 4 5 6; do xdotool click 5; done; sleep 1
 xdotool mousemove 380 466 click 1; xdotool type --delay 20 -- "$ONION"; sleep 1
@@ -66,7 +66,7 @@ if command -v zbarimg >/dev/null && command -v import >/dev/null; then
   rm -f "$SHOT"
   if [ -n "$CARD" ]; then
     xdotool mousemove 28 27 click 1; sleep 1; xdotool mousemove 28 27 click 1; sleep 1   # back to Home
-    xdotool mousemove 380 275 click 1; sleep 1                                        # Receive
+    xdotool mousemove 380 311 click 1; sleep 1                                        # Receive (275 until 1.2.2)
     xdotool mousemove 380 170 click 1; xdotool type --delay 10 -- "$CARD"; sleep 1
     xdotool mousemove 80 238 click 1; sleep 1                                         # Add
     xdotool mousemove 380 400; for _ in 1 2 3 4 5 6; do xdotool click 5; done; sleep 1
