@@ -2,7 +2,7 @@
 
 A small release: **brand 3.0.** The identity of 1.2.2 is replaced by the **Perforerad mark** — a perforated plate whose holes shrink away toward the upper right — with the name **ASKA** set below it; black and white, with one signal colour, yellow, that marks the brand and nothing else; colour otherwise only where it says something (connected, warning, refused); no slogan. The app icon is now the mark on a yellow tile, the Home screen shows the mark with the name under it, the main button is ink with a yellow label (yellow with an ink label in the dark style), warnings are orange, and buttons are sharper rectangles.
 
-Nothing else changed: no behaviour, no format, no rule. Everything from 1.2.0 works exactly as before, and notes, keys, pad pages and profiles are unaffected. Relay operators need not upgrade.
+Nothing else changed in Aska's own code: no behaviour, no format, no rule. Two dependencies were updated for advisories published after 1.2.2 — `ctutils` (used inside the ML-KEM implementation; its constant-time masks could branch on some platforms) and `tokio` (an unsound API Aska does not use) — with the known-answer tests unchanged; the release record has the details. Everything from 1.2.0 works exactly as before, and notes, keys, pad pages and profiles are unaffected. Relay operators may upgrade `aska-drop` to pick up the `tokio` fix; they need not.
 
 ## Still true
 
