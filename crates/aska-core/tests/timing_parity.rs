@@ -6,7 +6,11 @@
 //! Method: one Block with a decoy slot and a distress slot; `N` opens of each on fresh
 //! Sessions, interleaved so drift affects both equally; a two-sided Mann–Whitney U test on
 //! the durations. The gate passes when the two samples are not distinguishable at p < 0.01.
-//! Argon2id dominates each open, so this is slow: it is `#[ignore]` by default and run by
+//! A significance test fails by chance in 1 % of runs even when there is nothing to find, and
+//! a shared CI runner adds drift that interleaving does not fully cancel; so a measurement
+//! that fails is repeated once and the gate fails only when both measurements fail (false
+//! alarm 0.01 % per run; a real effect gives p ≈ 0 every time and still fails). Argon2id
+//! dominates each open, so this is slow: it is `#[ignore]` by default and run by
 //! `scripts/timing-parity.sh` (release build) and CI.
 
 use aska_core::consts::PTYPE_TEXT;
@@ -80,6 +84,17 @@ fn normal_cdf(z: f64) -> f64 {
     0.5 * (1.0 + erf)
 }
 
+/// Runs `measure` (which prints its own line and returns the p-value); if the result fails
+/// the gate, runs it once more and returns the second p-value. See the module comment.
+fn p_with_one_retry(what: &str, mut measure: impl FnMut() -> f64) -> f64 {
+    let p1 = measure();
+    if p1 >= 0.01 {
+        return p1;
+    }
+    eprintln!("{what}: p = {p1:.4} < 0.01 on the first measurement; measuring again");
+    measure()
+}
+
 fn median(v: &[f64]) -> f64 {
     let mut s = v.to_vec();
     s.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -113,29 +128,49 @@ fn decoy_and_distress_opens_are_indistinguishable_in_time() {
         dt
     };
 
-    let (mut decoy, mut distress) = (Vec::with_capacity(N), Vec::with_capacity(N));
-    for i in 0..N {
-        // Alternate the order each round so slow-then-fast drift cannot favour one side.
-        if i % 2 == 0 {
-            decoy.push(time_open("south"));
-            distress.push(time_open("help"));
-        } else {
-            distress.push(time_open("help"));
-            decoy.push(time_open("south"));
+    let measure = || -> f64 {
+        let (mut decoy, mut distress) = (Vec::with_capacity(N), Vec::with_capacity(N));
+        for i in 0..N {
+            // Alternate the order each round so slow-then-fast drift cannot favour one side.
+            if i % 2 == 0 {
+                decoy.push(time_open("south"));
+                distress.push(time_open("help"));
+            } else {
+                distress.push(time_open("help"));
+                decoy.push(time_open("south"));
+            }
         }
-    }
-    let p = mann_whitney_p(&decoy, &distress);
-    eprintln!(
-        "timing parity: N={N} median decoy {:.1} ms, median distress {:.1} ms, p = {p:.3}",
-        median(&decoy) * 1e3,
-        median(&distress) * 1e3
-    );
+        let p = mann_whitney_p(&decoy, &distress);
+        eprintln!(
+            "timing parity: N={N} median decoy {:.1} ms, median distress {:.1} ms, p = {p:.3}",
+            median(&decoy) * 1e3,
+            median(&distress) * 1e3
+        );
+        p
+    };
+    let p = p_with_one_retry("timing parity", measure);
     assert!(
         p >= 0.01,
-        "decoy and distress opens are distinguishable (p = {p:.4}): decoy {:?} distress {:?}",
-        decoy,
-        distress
+        "decoy and distress opens are distinguishable (p = {p:.4} on two measurements)"
     );
+}
+
+#[test]
+fn retry_rule_sanity() {
+    // A chance failure followed by a pass passes; two failures fail; a pass is not repeated.
+    let mut seq = vec![0.5, 0.001].into_iter();
+    assert_eq!(p_with_one_retry("t", || seq.next().unwrap()), 0.5);
+    let mut seq = vec![0.001, 0.001].into_iter();
+    assert_eq!(p_with_one_retry("t", || seq.next().unwrap()), 0.001);
+    let mut calls = 0;
+    assert_eq!(
+        p_with_one_retry("t", || {
+            calls += 1;
+            0.3
+        }),
+        0.3
+    );
+    assert_eq!(calls, 1);
 }
 
 #[test]
@@ -192,21 +227,28 @@ fn seed_matching_time_does_not_depend_on_a_match() {
         dt
     };
     let n = 400; // ~3 ms per round; enough rounds to see a 20 µs effect through CI noise
-    let (mut hit, mut miss) = (Vec::with_capacity(n), Vec::with_capacity(n));
-    for i in 0..n {
-        if i % 2 == 0 {
-            hit.push(time_match(&hit_bucket, true));
-            miss.push(time_match(&miss_bucket, false));
-        } else {
-            miss.push(time_match(&miss_bucket, false));
-            hit.push(time_match(&hit_bucket, true));
+    let measure = || -> f64 {
+        let (mut hit, mut miss) = (Vec::with_capacity(n), Vec::with_capacity(n));
+        for i in 0..n {
+            if i % 2 == 0 {
+                hit.push(time_match(&hit_bucket, true));
+                miss.push(time_match(&miss_bucket, false));
+            } else {
+                miss.push(time_match(&miss_bucket, false));
+                hit.push(time_match(&hit_bucket, true));
+            }
         }
-    }
-    let p = mann_whitney_p(&hit, &miss);
-    eprintln!(
-        "matching parity: 21 Blocks × {n}; median hit {:.2} ms, median miss {:.2} ms, p = {p:.3}",
-        median(&hit) * 1e3,
-        median(&miss) * 1e3
+        let p = mann_whitney_p(&hit, &miss);
+        eprintln!(
+            "matching parity: 21 Blocks × {n}; median hit {:.2} ms, median miss {:.2} ms, p = {p:.3}",
+            median(&hit) * 1e3,
+            median(&miss) * 1e3
+        );
+        p
+    };
+    let p = p_with_one_retry("matching parity", measure);
+    assert!(
+        p >= 0.01,
+        "matching time depends on the match (p = {p:.4} on two measurements)"
     );
-    assert!(p >= 0.01, "matching time depends on the match (p = {p:.4})");
 }
